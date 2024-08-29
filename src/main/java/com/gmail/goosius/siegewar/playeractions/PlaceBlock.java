@@ -361,7 +361,7 @@ public class PlaceBlock {
 		PlunderTown.processPlunderTownRequest(player, adjacentSieges.iterator().next());
 
 		//Call TownPlunderedEvent if the plunder doesn't throw an exception.
-		Bukkit.getPluginManager().callEvent(new TownPlunderedEvent(adjacentSiege, player));
+		Bukkit.getPluginManager().callEvent(new TownPlunderedEvent((Siege) adjacentSieges, player));
 	}
 	
 	private static boolean isWhiteBanner(Block block) {
