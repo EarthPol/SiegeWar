@@ -352,23 +352,18 @@ public class SiegeWarBattleSessionUtil {
 		// Retrieve today's candidate start times.
 		List<LocalDateTime> todayCandidateTimes = SiegeWarSettings.getAllBattleSessionStartTimesForToday();
 
-		// Check if biweekly scheduling is enabled.
+		// Force ISO-8601 week definitions (week starts on Monday)
+		WeekFields weekFields = WeekFields.ISO;
 		boolean biweeklyEnabled = SiegeWarSettings.isBattleSessionBiweeklyEnabled();
-		// Retrieve the desired parity, e.g. "even" or "odd" (default "even" if not configured)
 		String parity = SiegeWarSettings.getBattleSessionBiweeklyParity().toLowerCase(Locale.getDefault());
-		// Prepare WeekFields to calculate week numbers from dates.
-		WeekFields weekFields = WeekFields.of(Locale.getDefault());
 
-		// Look for the next configured start time for today.
+		// Look for the next configured start time for today that meets our criteria.
 		for (LocalDateTime candidateStartTime : todayCandidateTimes) {
-			// If biweekly is enabled, filter based on week parity.
 			if (biweeklyEnabled) {
 				int candidateWeek = candidateStartTime.get(weekFields.weekOfWeekBasedYear());
-				// For "even" parity, skip odd-numbered weeks.
 				if ("even".equals(parity) && candidateWeek % 2 != 0) {
 					continue;
 				}
-				// For "odd" parity, skip even-numbered weeks.
 				if ("odd".equals(parity) && candidateWeek % 2 == 0) {
 					continue;
 				}
@@ -379,15 +374,13 @@ public class SiegeWarBattleSessionUtil {
 			}
 		}
 
-		// If no suitable candidate was found for today, look for a candidate from future days.
+		// If no valid candidate was found for today, look in future days.
 		if (nextStartDateTime == null) {
 			nextStartDateTime = SiegeWarSettings.getNextBattleSessionDaysInAdvance();
-			// If biweekly filtering is enabled, make sure the candidate from a future day also matches the parity.
 			while (nextStartDateTime != null && biweeklyEnabled) {
 				int candidateWeek = nextStartDateTime.get(weekFields.weekOfWeekBasedYear());
 				if (("even".equals(parity) && candidateWeek % 2 != 0)
 						|| ("odd".equals(parity) && candidateWeek % 2 == 0)) {
-					// Candidate does not match parity; fetch the next candidate day.
 					nextStartDateTime = getNextCandidateFromNextDay(nextStartDateTime);
 				} else {
 					break;
@@ -395,7 +388,6 @@ public class SiegeWarBattleSessionUtil {
 			}
 		}
 
-		// If a valid start time was determined, convert it to UTC epoch millis.
 		if (nextStartDateTime != null) {
 			ZonedDateTime nextStartTimeInServerTimeZone = ZonedDateTime.of(nextStartDateTime, ZoneId.systemDefault());
 			ZonedDateTime nextStartTimeInUtcTimeZone = nextStartTimeInServerTimeZone.withZoneSameInstant(ZoneId.of("UTC"));
