@@ -433,7 +433,7 @@ public class SiegeWarSettings {
 		return nextSession;
 	}
 
-	private static List<LocalDateTime> getAllBattleSessionStartTimesForDay(LocalDate day) {
+	public static List<LocalDateTime> getAllBattleSessionStartTimesForDay(LocalDate day) {
 		//Get Start times for the given day
 		String startTimesAsString = "";
 		switch (day.getDayOfWeek()) {
