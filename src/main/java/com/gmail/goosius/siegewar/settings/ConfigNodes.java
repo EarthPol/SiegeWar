@@ -1238,7 +1238,29 @@ public enum ConfigNodes {
 			"# If this value is true, then the Siege Lore feature is enabled.",
 			"# When a banner is broken after a siege has ended, it will drop with a name and lore set to display info about the siege.",
 			"# Banners dropped from this feature can be placed and broken without losing lore, but can not be used to begin a new siege.",
-			"# Shields can be crafted from the lore banners and will inherit the lore and name from the banner.");
+			"# Shields can be crafted from the lore banners and will inherit the lore and name from the banner."),
+
+
+	// ==== EARTHPOL CUSTOM SETTINGS ====
+
+	BATTLE_SESSION_SCHEDULER_BIWEEKLY_ENABLED(
+			"battle_session_scheduler.biweekly_enabled",
+			"false",
+			"# EARTHPOL CUSTOM: If true, battle sessions will be scheduled on a biweekly basis (every other week)."
+	),
+	BATTLE_SESSION_SCHEDULER_BIWEEKLY_PARITY(
+			"battle_session_scheduler.biweekly_parity",
+			"even",
+			"# EARTHPOL CUSTOM: Determines the week parity in which battle sessions occur.",
+			"# Use 'even' for even-numbered weeks or 'odd' for odd-numbered weeks."
+	);
+
+
+
+
+
+
+
 	private final String Root;
 	private final String Default;
 	private String[] comments;

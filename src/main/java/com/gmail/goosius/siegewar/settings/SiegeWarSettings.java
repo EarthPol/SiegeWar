@@ -661,4 +661,19 @@ public class SiegeWarSettings {
 	public static String getDynmapLayerName() {
 		return Settings.getString(ConfigNodes.WAR_SIEGE_DYNMAP_LAYER_NAME);
 	}
+
+	// ======  EARTHPOL FORK SPECIFIC SETTINGS ======
+
+	public static boolean isBattleSessionBiweeklyEnabled() {
+		// Reads from the config using a key defined in ConfigNodes.
+		// Make sure you define ConfigNodes.BATTLE_SESSION_SCHEDULER_BIWEEKLY_ENABLED (or similar) to match "battle_session_scheduler.biweekly_enabled"
+		return Settings.getBoolean(ConfigNodes.BATTLE_SESSION_SCHEDULER_BIWEEKLY_ENABLED);
+	}
+
+	public static String getBattleSessionBiweeklyParity() {
+		// Reads the parity setting ("even" or "odd") from config.
+		// Again, define ConfigNodes.BATTLE_SESSION_SCHEDULER_BIWEEKLY_PARITY to match "battle_session_scheduler.biweekly_parity"
+		return Settings.getString(ConfigNodes.BATTLE_SESSION_SCHEDULER_BIWEEKLY_PARITY);
+	}
+
 }
