@@ -161,18 +161,21 @@ public class SiegeWarCommand implements CommandExecutor, TabCompleter {
 
 	private void parseSiegeWarNextSessionCommand(Player player) {
 		BattleSession session = BattleSession.getBattleSession();
-		if (session.isActive())
+		if (session.isActive()) {
 			Messaging.sendMsg(player, Translatable.of("msg_session_is_active_now"));
-		else {
-			Translatable message = Translatable.of("msg_next_session_cannot_be_determined");
-			if (session.getScheduledStartTime() != null) {
-				long timeRemaining = session.getScheduledStartTime() - System.currentTimeMillis(); 
-				message = Translatable.of("msg_next_siege_session_in_minutes", TimeMgmt.getFormattedTimeValue(timeRemaining));
+		} else {
+			// Check if a scheduled start time exists.
+			if (session.getScheduledStartTime() == null) {
+				// When no start time is set, tell the player there are no sieges this week.
+				Messaging.sendMsg(player, Translatable.of("msg_no_sieges_this_week"));
+			} else {
+				long timeRemaining = session.getScheduledStartTime() - System.currentTimeMillis();
+				Translatable message = Translatable.of("msg_next_siege_session_in_minutes", TimeMgmt.getFormattedTimeValue(timeRemaining));
+				Messaging.sendMsg(player, message);
 			}
-			Messaging.sendMsg(player, message);
 		}
-		
 	}
+
 
 	private void parseSiegeWarCollectCommand(Player player) {
 		if(!TownyEconomyHandler.isActive())
