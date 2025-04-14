@@ -723,3 +723,6 @@ msg_err_town_already_invaded_only_one_action: "&cYou cannot plunder an already i
 
 siege_msg_err_cannot_assign_rank_during_active_battlesession: "&cYou cannot add the %s rank while the battle session is active."
 siege_msg_err_cannot_assign_rank_during_active_siege: "&cYou cannot add the %s rank while your town is involved in a siege."
+
+# EarthPol Custom Messages
+msg_no_sieges_this_week: "There will be no sieges this week. Check back next week."

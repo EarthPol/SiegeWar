@@ -23,10 +23,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffectType;
 
 import java.time.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.temporal.WeekFields;
+import java.util.*;
 
 public class SiegeWarBattleSessionUtil {
 	
@@ -351,27 +349,63 @@ public class SiegeWarBattleSessionUtil {
 		LocalDateTime currentTime = LocalDateTime.now();
 		LocalDateTime nextStartDateTime = null;
 
-		//Look for next configured-start-time for today
-		for (LocalDateTime candidateStartTime : SiegeWarSettings.getAllBattleSessionStartTimesForToday()) {
-			if(candidateStartTime.isAfter(currentTime)) {
+		// Retrieve today's candidate start times.
+		List<LocalDateTime> todayCandidateTimes = SiegeWarSettings.getAllBattleSessionStartTimesForToday();
+
+		// Force ISO-8601 week definitions (week starts on Monday)
+		WeekFields weekFields = WeekFields.ISO;
+		boolean biweeklyEnabled = SiegeWarSettings.isBattleSessionBiweeklyEnabled();
+		String parity = SiegeWarSettings.getBattleSessionBiweeklyParity().toLowerCase(Locale.getDefault());
+
+		// Look for the next configured start time for today that meets our criteria.
+		for (LocalDateTime candidateStartTime : todayCandidateTimes) {
+			if (biweeklyEnabled) {
+				int candidateWeek = candidateStartTime.get(weekFields.weekOfWeekBasedYear());
+				if ("even".equals(parity) && candidateWeek % 2 != 0) {
+					continue;
+				}
+				if ("odd".equals(parity) && candidateWeek % 2 == 0) {
+					continue;
+				}
+			}
+			if (candidateStartTime.isAfter(currentTime)) {
 				nextStartDateTime = candidateStartTime;
 				break;
 			}
 		}
 
-		//If no configured-start-time was found, look for the first configured time for the rest of the week.
-		if(nextStartDateTime == null) {
+		// If no valid candidate was found for today, look in future days.
+		if (nextStartDateTime == null) {
 			nextStartDateTime = SiegeWarSettings.getNextBattleSessionDaysInAdvance();
+			while (nextStartDateTime != null && biweeklyEnabled) {
+				int candidateWeek = nextStartDateTime.get(weekFields.weekOfWeekBasedYear());
+				if (("even".equals(parity) && candidateWeek % 2 != 0)
+						|| ("odd".equals(parity) && candidateWeek % 2 == 0)) {
+					nextStartDateTime = getNextCandidateFromNextDay(nextStartDateTime);
+				} else {
+					break;
+				}
+			}
 		}
 
-		//If nextStartTime is still null, return null, else return the UTC time in millis of the given value.
-		if(nextStartDateTime != null) {
+		if (nextStartDateTime != null) {
 			ZonedDateTime nextStartTimeInServerTimeZone = ZonedDateTime.of(nextStartDateTime, ZoneId.systemDefault());
 			ZonedDateTime nextStartTimeInUtcTimeZone = nextStartTimeInServerTimeZone.withZoneSameInstant(ZoneId.of("UTC"));
 			return nextStartTimeInUtcTimeZone.toInstant().toEpochMilli();
 		} else {
 			return null;
 		}
+	}
+
+	/**
+	 * Helper method to fetch a candidate start time from the day following the provided candidate.
+	 * This method retrieves all candidate start times for the day after the candidate's date and returns
+	 * the first candidate if available, or null otherwise.
+	 */
+	private static LocalDateTime getNextCandidateFromNextDay(LocalDateTime currentCandidate) {
+		LocalDate nextDay = currentCandidate.toLocalDate().plusDays(1);
+		List<LocalDateTime> candidateTimes = SiegeWarSettings.getAllBattleSessionStartTimesForDay(nextDay);
+		return candidateTimes.isEmpty() ? null : candidateTimes.get(0);
 	}
 
 }
