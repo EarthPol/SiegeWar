@@ -166,7 +166,6 @@ public class SiegeWar extends JavaPlugin {
 			pm.registerEvents(new SiegeWarStatusScreenListener(), this);
 			pm.registerEvents(new SiegeWarSelfListener(), this);
 			pm.registerEvents(new SiegeWarLoreListener(), this);
-			pm.registerEvents(new CreatureSpawnEventListener(), this);
 			if (getServer().getPluginManager().isPluginEnabled("TownyChat")) {
 				info("SiegeWar found TownyChat plugin, enabling TownyChat integration.");
 				pm.registerEvents(new SiegeWarTownyChatEventListener(), this);
