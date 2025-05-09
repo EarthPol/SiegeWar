@@ -72,9 +72,13 @@ public class StartConquestSiege {
 				throw new TownyException(translator.of("msg_err_siege_war_cannot_attack_non_enemy_nation"));
 		}
 
+		// EARTHPOL CUSTOM CHANGE: Disable distance from capital check for conquest sieges.
+		// This checks the values under the "proximity:" section of the Towny config.
+		/*
 		SiegeWarDistanceUtil.throwIfTownIsTooFarFromNationCapitalByWorld(nationOfSiegeStarter, targetTown);
 
 		SiegeWarDistanceUtil.throwIfTownIsTooFarFromNationCapitalByDistance(nationOfSiegeStarter, targetTown);
+		 */
 
 		SiegeWarNationUtil.throwIfNationHasTooManyTowns(nationOfSiegeStarter);
 	}
