@@ -1,6 +1,7 @@
 package com.gmail.goosius.siegewar.utils;
 
 import com.gmail.goosius.siegewar.SiegeController;
+import com.gmail.goosius.siegewar.SiegeWarAPI;
 import com.gmail.goosius.siegewar.TownOccupationController;
 import com.gmail.goosius.siegewar.metadata.TownMetaDataController;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
@@ -128,6 +129,12 @@ public class SiegeWarTownPeacefulnessUtil {
 		Town town = resident.getTownOrNull();
 		if (town.isCapital() && !SiegeWarSettings.capitalsAllowedTownPeacefulness()) {
 			player.sendMessage(translator.of("msg_err_capital_towns_cannot_go_peaceful"));
+			return;
+		}
+
+		//Deny a peaceful status change if the town is currently involved in a siege.
+		if(SiegeController.hasActiveSiege(town)) {
+			player.sendMessage("Your town cannot change peacefulness status while actively involved in a siege.");
 			return;
 		}
 
