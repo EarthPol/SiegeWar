@@ -1,5 +1,11 @@
 # SiegeWar
-*SiegeWar* adds a war system to *Towny*.
+# EarthPol Edition 
+*SiegeWar* adds a war system to *Towny*. 
+
+*EarthPol* was one of the original servers to adopt *SiegeWar*. Since its integration into the Towny ecosystem and the departure of its original creator, the plugin has taken a direction we believe no longer fits our needs. In July 2025, EarthPol made the decision to fork *SiegeWar* for its own purposes. Due to licensing restrictions, this version is exclusive to EarthPol and will not be distributed elsewhere but will remain public.
+
+<img width="1213" height="790" alt="image" src="https://github.com/user-attachments/assets/0f832653-1241-4b4d-b845-7f63884dfeb8" />
+
 ### Features
 * ⚔️ **Sieges:** Wars are conducted by means of sieges. A siege occurs when a nation attacks a town.
 * 🌍 **Inclusive:** The whole server is involved, with no opt-outs. So a nation can conquer the world!. 
