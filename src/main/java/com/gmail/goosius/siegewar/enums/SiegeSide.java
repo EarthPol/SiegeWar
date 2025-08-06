@@ -76,4 +76,25 @@ public enum SiegeSide {
 			return false;
 		}
 	}
+
+	private static boolean isPlayerNationAlliedToBothSiegeNations(Siege siege, Player player) {
+		Resident resident = TownyAPI.getInstance().getResident(player);
+		if (resident == null || !resident.hasTown()) return false;
+
+		Nation residentNation = resident.getNationOrNull();
+		if (residentNation == null) return false;
+
+		Government attackingGovt = siege.getAttackingNationIfPossibleElseTown();
+		Government defendingGovt = siege.getDefendingNationIfPossibleElseTown();
+
+		// Both attacking and defending governments must be be Nations
+		if ( !(attackingGovt instanceof Nation attackerNation) ||
+				!(defendingGovt instanceof Nation defenderNation) ) return false;
+
+        // Don't return true for the player's own nation.
+		if(attackerNation == residentNation || defenderNation == residentNation) return false;
+
+		return attackerNation.isAlliedWith(residentNation) && defenderNation.isAlliedWith(residentNation);
+
+	}
 }
