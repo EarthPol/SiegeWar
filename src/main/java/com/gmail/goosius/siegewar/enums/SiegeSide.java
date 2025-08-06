@@ -24,6 +24,8 @@ public enum SiegeSide {
 	}
 
 	public static SiegeSide getPlayerSiegeSide(Siege siege, Player player) {
+		if(isPlayerNationAlliedToBothSiegeNations(siege,player)) return SiegeSide.NOBODY;
+
 		Resident resident = TownyAPI.getInstance().getResident(player);
 		if (resident == null || !resident.hasTown())
 			return SiegeSide.NOBODY;
