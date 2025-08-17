@@ -116,12 +116,12 @@ public class SiegeWarNotificationUtil {
 			for(Nation nationToInform: nationsToInform) {
 				for (Translatable line : message) 
 					if (line != null)
-						TownyMessaging.sendPrefixedNationMessage(nationToInform, line);
+						SiegeWarMessageUtil.sendPrefixedNationMessage(nationToInform, line);
 			}
 			for(Town townToInform: townsToInform) {
 				for (Translatable line : message)
 					if (line != null)
-						TownyMessaging.sendPrefixedTownMessage(townToInform, line);
+						SiegeWarMessageUtil.sendPrefixedTownMessage(townToInform, line);
 			}
 
 		} catch (Exception e) {
