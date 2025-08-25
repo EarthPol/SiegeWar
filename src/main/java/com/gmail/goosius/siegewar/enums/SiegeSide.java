@@ -1,5 +1,6 @@
 package com.gmail.goosius.siegewar.enums;
 
+import com.earthpol.earthPolLib.annotation.EarthPolCustom;
 import org.bukkit.entity.Player;
 
 import com.gmail.goosius.siegewar.objects.Siege;
@@ -79,6 +80,7 @@ public enum SiegeSide {
 		}
 	}
 
+	@EarthPolCustom("Determine if player is allied to both nations in a siege.")
 	private static boolean isPlayerNationAlliedToBothSiegeNations(Siege siege, Player player) {
 		Resident resident = TownyAPI.getInstance().getResident(player);
 		if (resident == null || !resident.hasTown()) return false;

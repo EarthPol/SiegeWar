@@ -1,5 +1,7 @@
 package com.gmail.goosius.siegewar.settings;
 
+import com.earthpol.earthPolLib.annotation.EarthPolCustom;
+
 public enum ConfigNodes {
 
 	VERSION_HEADER("version", "", ""),
@@ -1249,12 +1251,13 @@ public enum ConfigNodes {
 
 
 	// ==== EARTHPOL CUSTOM SETTINGS ====
-
+	@EarthPolCustom
 	BATTLE_SESSION_SCHEDULER_BIWEEKLY_ENABLED(
 			"battle_session_scheduler.biweekly_enabled",
 			"false",
 			"# EARTHPOL CUSTOM: If true, battle sessions will be scheduled on a biweekly basis (every other week)."
 	),
+	@EarthPolCustom
 	BATTLE_SESSION_SCHEDULER_BIWEEKLY_PARITY(
 			"battle_session_scheduler.biweekly_parity",
 			"even",
