@@ -2,6 +2,7 @@ package com.gmail.goosius.siegewar.utils;
 
 import com.gmail.goosius.siegewar.SiegeController;
 import com.gmail.goosius.siegewar.enums.SiegeSide;
+import com.gmail.goosius.siegewar.events.BattleSessionAwardPointsEvent;
 import com.gmail.goosius.siegewar.events.BattleSessionPenaltyPointsEvent;
 import com.gmail.goosius.siegewar.objects.Siege;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
@@ -89,6 +90,9 @@ public class SiegeWarScoringUtil {
 		}
 
 		Bukkit.getPluginManager().callEvent( new BattleSessionPenaltyPointsEvent(siege, Math.abs(battlePoints), reason, residentIsAttacker, player, killer));
+		Bukkit.getPluginManager().callEvent(new BattleSessionAwardPointsEvent(siege, Math.abs(battlePoints),
+				killer != null ? BattleSessionAwardPointsEvent.Reason.KILLED_BY_PLAYER : BattleSessionAwardPointsEvent.Reason.DEATH,
+				residentIsAttacker, player, killer));
 
 
 		//Send messages to siege participants
