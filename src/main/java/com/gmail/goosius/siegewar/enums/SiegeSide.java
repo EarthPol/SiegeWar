@@ -24,6 +24,11 @@ public enum SiegeSide {
 	}
 
 	public static SiegeSide getPlayerSiegeSide(Siege siege, Player player) {
+		if (siege.isPlayerSideOverridesEnabled()) {
+			SiegeSide override = siege.getPlayerSideOverride(player.getUniqueId());
+			return override != null ? override : SiegeSide.NOBODY;
+		}
+
 		Resident resident = TownyAPI.getInstance().getResident(player);
 		if (resident == null || !resident.hasTown())
 			return SiegeSide.NOBODY;

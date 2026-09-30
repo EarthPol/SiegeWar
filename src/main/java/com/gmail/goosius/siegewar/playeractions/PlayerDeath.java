@@ -62,8 +62,7 @@ public class PlayerDeath {
 		//Battle-points & banner-control-sessions
 		try {
 			Resident deadResident = TownyUniverse.getInstance().getResident(deadPlayer.getUniqueId());
-			// Weed out invalid residents, residents without a town, and players who cannot collect Points in a Siege.
-			if (deadResident == null || !deadResident.hasTown() || playerIsMissingSiegePointsNodes(deadPlayer) || (SiegeWarSettings.getWarCommonOccupiedTownBattleParticipationDisabled() && TownOccupationController.isResidentInAnOccupiedTown(deadResident)))
+			if (deadResident == null || (SiegeWarSettings.getWarCommonOccupiedTownBattleParticipationDisabled() && TownOccupationController.isResidentInAnOccupiedTown(deadResident)))
 				return;
 
 			Town deadResidentTown = deadResident.getTownOrNull();
@@ -109,6 +108,10 @@ public class PlayerDeath {
 
 			//Skip if player is not is siege-zone
 			if(!SiegeWarDistanceUtil.isInSiegeZone(deadPlayer, candidateSiege))
+				continue;
+
+			if (!candidateSiege.hasActivePlayerSideOverride(deadPlayer.getUniqueId())
+					&& (deadResidentTown == null || playerIsMissingSiegePointsNodes(deadPlayer)))
 				continue;
 
 			//Skip if player is not an official attacker or defender in siege

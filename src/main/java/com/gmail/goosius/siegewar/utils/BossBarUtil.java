@@ -54,7 +54,7 @@ public class BossBarUtil {
 	}
 
 	public static void removeBannerCapBossBar(Player player) {
-		if (player.isOnline()) {
+		if (player.isOnline() && bossBarBannerCapMap.containsKey(player)) {
 			player.hideBossBar(bossBarBannerCapMap.get(player));
 		}
 		bossBarBannerCapMap.remove(player);

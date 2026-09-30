@@ -23,7 +23,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * This class represents a "Siege".
@@ -67,6 +69,8 @@ public class Siege {
 	private Resident attackingCommander;
 	private Resident defendingCommander;
 	private String endMessage;
+	private volatile boolean playerSideOverridesEnabled;
+	private final Map<UUID, SiegeSide> playerSideOverrides = new ConcurrentHashMap<>();
 
 	public Siege(Town town) {
 		this.town = town;
@@ -96,6 +100,34 @@ public class Siege {
     public Town getTown() {
         return town;
     }
+
+	public boolean isPlayerSideOverridesEnabled() {
+		return playerSideOverridesEnabled;
+	}
+
+	public void setPlayerSideOverridesEnabled(boolean enabled) {
+		playerSideOverridesEnabled = enabled;
+	}
+
+	public Map<UUID, SiegeSide> getPlayerSideOverrides() {
+		return Map.copyOf(playerSideOverrides);
+	}
+
+	public SiegeSide getPlayerSideOverride(UUID playerUUID) {
+		return playerSideOverrides.get(playerUUID);
+	}
+
+	public boolean hasActivePlayerSideOverride(UUID playerUUID) {
+		return playerSideOverridesEnabled && playerSideOverrides.containsKey(playerUUID);
+	}
+
+	public void setPlayerSideOverride(UUID playerUUID, SiegeSide side) {
+		Objects.requireNonNull(playerUUID, "playerUUID");
+		if (side == null)
+			playerSideOverrides.remove(playerUUID);
+		else
+			playerSideOverrides.put(playerUUID, side);
+	}
 
 	public UUID getUUID() {
 		return uuid;

@@ -80,6 +80,7 @@ public class SiegeController {
 
 	public static void saveSiege(Siege siege) {
 		Town town = siege.getTown();
+		SiegeMetaDataController.setPlayerSideOverrides(town, siege.isPlayerSideOverridesEnabled(), siege.getPlayerSideOverrides());
 		if (siege.getStartedAtMillis() <= 0L)
 			siege.setStartedAtMillis(System.currentTimeMillis());
 		SiegeMetaDataController.setSiegeUUID(town, siege.getUUID().toString());
@@ -155,6 +156,10 @@ public class SiegeController {
 	public static boolean loadSiege(Siege siege) {
 		//Town will be already loaded
 		Town town = siege.getTown();
+		for (UUID playerUUID : siege.getPlayerSideOverrides().keySet())
+			siege.setPlayerSideOverride(playerUUID, null);
+		SiegeMetaDataController.getPlayerSideOverrides(town).forEach(siege::setPlayerSideOverride);
+		siege.setPlayerSideOverridesEnabled(SiegeMetaDataController.isPlayerSideOverridesEnabled(town));
 
 		boolean needsResave = false;
 		try {

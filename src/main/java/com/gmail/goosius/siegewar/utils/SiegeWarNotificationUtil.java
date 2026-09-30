@@ -3,9 +3,11 @@ package com.gmail.goosius.siegewar.utils;
 import com.gmail.goosius.siegewar.Messaging;
 import com.gmail.goosius.siegewar.SiegeController;
 import com.gmail.goosius.siegewar.SiegeWar;
+import com.gmail.goosius.siegewar.enums.SiegeSide;
 import com.gmail.goosius.siegewar.metadata.ResidentMetaDataController;
 import com.gmail.goosius.siegewar.objects.Siege;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
+import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.object.Nation;
 import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Town;
@@ -120,6 +122,14 @@ public class SiegeWarNotificationUtil {
 			}
 			for(Town townToInform: townsToInform) {
 				residentsToInform.addAll(townToInform.getResidents());
+			}
+			if (siege.isPlayerSideOverridesEnabled()) {
+				residentsToInform.clear();
+				siege.getPlayerSideOverrides().forEach((playerUUID, side) -> {
+					Resident resident = TownyAPI.getInstance().getResident(playerUUID);
+					if (resident != null && side != SiegeSide.NOBODY)
+						residentsToInform.add(resident);
+				});
 			}
 			for (Resident resident : residentsToInform) {
 				if (ResidentMetaDataController.getNotificationsDisabled(resident))

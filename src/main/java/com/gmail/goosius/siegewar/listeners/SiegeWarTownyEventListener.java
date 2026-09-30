@@ -34,6 +34,7 @@ import com.palmergames.bukkit.towny.event.TranslationLoadEvent;
 import com.palmergames.bukkit.towny.event.actions.TownyExplodingBlocksEvent;
 import com.palmergames.bukkit.towny.event.damage.TownyExplosionDamagesEntityEvent;
 import com.palmergames.bukkit.towny.event.damage.TownyFriendlyFireTestEvent;
+import com.palmergames.bukkit.towny.event.damage.TownyPlayerDamagePlayerEvent;
 import com.palmergames.bukkit.towny.event.nation.NationRankAddEvent;
 import com.palmergames.bukkit.towny.event.nation.NationRankRemoveEvent;
 import com.palmergames.bukkit.towny.event.player.PlayerKeepsInventoryEvent;
@@ -288,6 +289,15 @@ public class SiegeWarTownyEventListener implements Listener {
      */
     @EventHandler(ignoreCancelled = true)
     public void on (TownyFriendlyFireTestEvent event) {
+        Siege siege = getPlayerSideOverrideSiege(event.getAttacker(), event.getDefender());
+        if (siege != null) {
+            SiegeSide attackerSide = SiegeSide.getPlayerSiegeSide(siege, event.getAttacker());
+            SiegeSide defenderSide = SiegeSide.getPlayerSiegeSide(siege, event.getDefender());
+            if (attackerSide != SiegeSide.NOBODY && defenderSide != SiegeSide.NOBODY) {
+                event.setPVP(attackerSide != defenderSide || SiegeWarSettings.isStopTownyFriendlyFireProtection());
+                return;
+            }
+        }
     	if (!event.isPVP()
     	        && SiegeWarSettings.getWarSiegeEnabled() 
                 && TownyAPI.getInstance().getTownyWorld(event.getAttacker().getWorld()).isWarAllowed()
@@ -296,6 +306,29 @@ public class SiegeWarTownyEventListener implements Listener {
                 && SiegeWarDistanceUtil.isPlayerRegisteredToActiveSiegeZone(event.getAttacker())) {
             event.setPVP(true);
         }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onPlayerSideFriendlyFire(TownyPlayerDamagePlayerEvent event) {
+        if (event.getAttackingPlayer() == event.getVictimPlayer()
+                || SiegeWarSettings.isStopTownyFriendlyFireProtection())
+            return;
+        Siege siege = getPlayerSideOverrideSiege(event.getAttackingPlayer(), event.getVictimPlayer());
+        if (siege == null || TownyAPI.getInstance().getTownyWorld(event.getAttackingPlayer().getWorld()).isFriendlyFireEnabled())
+            return;
+        SiegeSide attackerSide = SiegeSide.getPlayerSiegeSide(siege, event.getAttackingPlayer());
+        if (attackerSide != SiegeSide.NOBODY && attackerSide == SiegeSide.getPlayerSiegeSide(siege, event.getVictimPlayer()))
+            event.setCancelled(true);
+    }
+
+    @Nullable
+    private Siege getPlayerSideOverrideSiege(Player attacker, Player defender) {
+        if (!SiegeWarSettings.getWarSiegeEnabled() || !BattleSession.getBattleSession().isActive()
+                || !TownyAPI.getInstance().getTownyWorld(attacker.getWorld()).isWarAllowed())
+            return null;
+        Siege siege = SiegeController.getActiveSiegeAtLocation(attacker);
+        return siege != null && siege.isPlayerSideOverridesEnabled()
+                && siege == SiegeController.getActiveSiegeAtLocation(defender) ? siege : null;
     }
 
     /**

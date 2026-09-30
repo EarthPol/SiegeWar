@@ -1,8 +1,14 @@
 package com.gmail.goosius.siegewar.metadata;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.jetbrains.annotations.Nullable;
 
 import com.gmail.goosius.siegewar.SiegeWar;
+import com.gmail.goosius.siegewar.enums.SiegeSide;
 import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.towny.object.metadata.BooleanDataField;
 import com.palmergames.bukkit.towny.object.metadata.DecimalDataField;
@@ -46,6 +52,8 @@ public class SiegeMetaDataController {
 	private static StringDataField siegeUUID = new StringDataField("siegewar_siegeUUID", "");
 	private static DecimalDataField siegeStartedAtMillis = new DecimalDataField("siegewar_startedAtMillis", 0.0);
 	private static DecimalDataField siegeEndedAtMillis = new DecimalDataField("siegewar_endedAtMillis", 0.0);
+	private static final BooleanDataField playerSideOverridesEnabled = new BooleanDataField("siegewar_playerSideOverridesEnabled", false);
+	private static final StringDataField playerSideOverrides = new StringDataField("siegewar_playerSideOverrides", "");
 	
 	public SiegeMetaDataController(SiegeWar plugin) {
 		this.plugin = plugin;
@@ -342,7 +350,38 @@ public class SiegeMetaDataController {
 			town.addMetaData(new DecimalDataField("siegewar_endedAtMillis", (double) millis));
 	}
 
+	public static boolean isPlayerSideOverridesEnabled(Town town) {
+		return town.hasMeta(playerSideOverridesEnabled.getKey()) && MetaDataUtil.getBoolean(town, playerSideOverridesEnabled);
+	}
+
+	public static Map<UUID, SiegeSide> getPlayerSideOverrides(Town town) {
+		Map<UUID, SiegeSide> overrides = new HashMap<>();
+		if (!town.hasMeta(playerSideOverrides.getKey()))
+			return overrides;
+		String stored = MetaDataUtil.getString(town, playerSideOverrides);
+		if (stored.isEmpty())
+			return overrides;
+		for (String entry : stored.split(";")) {
+			String[] parts = entry.split("=", 2);
+			if (parts.length != 2)
+				throw new IllegalArgumentException("Invalid siege player side override for town " + town.getName());
+			overrides.put(UUID.fromString(parts[0]), SiegeSide.valueOf(parts[1]));
+		}
+		return overrides;
+	}
+
+	public static void setPlayerSideOverrides(Town town, boolean enabled, Map<UUID, SiegeSide> overrides) {
+		MetaDataUtil.setBoolean(town, playerSideOverridesEnabled, enabled, false);
+		String stored = overrides.entrySet().stream().sorted(Map.Entry.comparingByKey())
+				.map(entry -> entry.getKey() + "=" + entry.getValue().name()).collect(Collectors.joining(";"));
+		MetaDataUtil.setString(town, playerSideOverrides, stored, false);
+	}
+
 	public static void removeSiegeMeta (Town town) {
+		if (town.hasMeta(playerSideOverridesEnabled.getKey()))
+			town.removeMetaData(playerSideOverridesEnabled);
+		if (town.hasMeta(playerSideOverrides.getKey()))
+			town.removeMetaData(playerSideOverrides);
 		StringDataField sdf = (StringDataField) siegeName.clone();
 		if (town.hasMeta(sdf.getKey()))
 			town.removeMetaData(sdf);

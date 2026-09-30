@@ -1,8 +1,10 @@
 package com.gmail.goosius.siegewar;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -15,10 +17,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import com.gmail.goosius.siegewar.enums.SiegeStatus;
+import com.gmail.goosius.siegewar.enums.SiegeSide;
+import com.gmail.goosius.siegewar.metadata.SiegeMetaDataController;
 import com.gmail.goosius.siegewar.objects.BannerControlSession;
 import com.gmail.goosius.siegewar.objects.BattleSession;
 import com.gmail.goosius.siegewar.objects.Siege;
 import com.gmail.goosius.siegewar.utils.SiegeWarDistanceUtil;
+import com.gmail.goosius.siegewar.utils.SiegeWarBannerControlUtil;
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.exceptions.TownyException;
 import com.palmergames.bukkit.towny.object.Nation;
@@ -28,6 +33,59 @@ import com.palmergames.bukkit.towny.object.TownBlock;
 import com.palmergames.bukkit.towny.object.Translatable;
 
 public class SiegeWarAPI {
+
+	public static SiegeSide getPlayerSiegeSide(@NotNull Siege siege, @NotNull Player player) {
+		return SiegeSide.getPlayerSiegeSide(siege, player);
+	}
+
+	public static boolean isPlayerSideOverridesEnabled(@NotNull Siege siege) {
+		return siege.isPlayerSideOverridesEnabled();
+	}
+
+	public static void setPlayerSideOverridesEnabled(@NotNull Siege siege, boolean enabled) {
+		requireActiveSiege(siege);
+		if (siege.isPlayerSideOverridesEnabled() == enabled)
+			return;
+		siege.setPlayerSideOverridesEnabled(enabled);
+		Set<UUID> affectedPlayers = new HashSet<>(siege.getPlayerSideOverrides().keySet());
+		for (Player player : siege.getBannerControlSessions().keySet())
+			affectedPlayers.add(player.getUniqueId());
+		for (Resident resident : siege.getBannerControllingResidents())
+			affectedPlayers.add(resident.getUUID());
+		if (siege.getAttackingCommander() != null)
+			affectedPlayers.add(siege.getAttackingCommander().getUUID());
+		if (siege.getDefendingCommander() != null)
+			affectedPlayers.add(siege.getDefendingCommander().getUUID());
+		for (UUID playerUUID : affectedPlayers)
+			SiegeWarBannerControlUtil.clearPlayerParticipation(siege, playerUUID);
+		savePlayerSideOverrides(siege);
+	}
+
+	public static Map<UUID, SiegeSide> getPlayerSideOverrides(@NotNull Siege siege) {
+		return siege.getPlayerSideOverrides();
+	}
+
+	public static void setPlayerSideOverride(@NotNull Siege siege, @NotNull UUID playerUUID, @Nullable SiegeSide side) {
+		requireActiveSiege(siege);
+		Objects.requireNonNull(playerUUID, "playerUUID");
+		if (siege.getPlayerSideOverride(playerUUID) == side)
+			return;
+		siege.setPlayerSideOverride(playerUUID, side);
+		if (siege.isPlayerSideOverridesEnabled())
+			SiegeWarBannerControlUtil.clearPlayerParticipation(siege, playerUUID);
+		savePlayerSideOverrides(siege);
+	}
+
+	private static void requireActiveSiege(Siege siege) {
+		Objects.requireNonNull(siege, "siege");
+		if (SiegeController.getSiege(siege.getTown()) != siege || siege.getStatus() == null || !isActive(siege))
+			throw new IllegalArgumentException("Player side overrides require a loaded, active siege");
+	}
+
+	private static void savePlayerSideOverrides(Siege siege) {
+		SiegeMetaDataController.setPlayerSideOverrides(siege.getTown(), siege.isPlayerSideOverridesEnabled(), siege.getPlayerSideOverrides());
+		siege.getTown().save();
+	}
 
 	/**
 	 * @return a List of the Sieges.
