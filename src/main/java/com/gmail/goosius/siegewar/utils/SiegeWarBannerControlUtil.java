@@ -42,8 +42,12 @@ import java.util.UUID;
 public class SiegeWarBannerControlUtil {
 
 	public static void clearPlayerParticipation(Siege siege, UUID playerUUID) {
+		clearPlayerParticipations(siege, Set.of(playerUUID));
+	}
+
+	public static void clearPlayerParticipations(Siege siege, Set<UUID> playerUUIDs) {
 		for (BannerControlSession session : siege.getBannerControlSessions().values()) {
-			if (!session.getPlayer().getUniqueId().equals(playerUUID))
+			if (!playerUUIDs.contains(session.getPlayer().getUniqueId()))
 				continue;
 			siege.removeBannerControlSession(session);
 			BossBarUtil.removeBannerCapBossBar(session.getPlayer());
@@ -53,11 +57,11 @@ public class SiegeWarBannerControlUtil {
 						() -> session.getPlayer().removePotionEffect(PotionEffectType.GLOWING), 1L);
 		}
 		for (Resident resident : siege.getBannerControllingResidents())
-			if (resident.getUUID().equals(playerUUID))
+			if (playerUUIDs.contains(resident.getUUID()))
 				siege.removeBannerControllingResident(resident);
-		if (siege.getAttackingCommander() != null && siege.getAttackingCommander().getUUID().equals(playerUUID))
+		if (siege.getAttackingCommander() != null && playerUUIDs.contains(siege.getAttackingCommander().getUUID()))
 			siege.setAttackingCommander(null);
-		if (siege.getDefendingCommander() != null && siege.getDefendingCommander().getUUID().equals(playerUUID))
+		if (siege.getDefendingCommander() != null && playerUUIDs.contains(siege.getDefendingCommander().getUUID()))
 			siege.setDefendingCommander(null);
 	}
 

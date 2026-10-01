@@ -57,8 +57,7 @@ public class SiegeWarAPI {
 			affectedPlayers.add(siege.getAttackingCommander().getUUID());
 		if (siege.getDefendingCommander() != null)
 			affectedPlayers.add(siege.getDefendingCommander().getUUID());
-		for (UUID playerUUID : affectedPlayers)
-			SiegeWarBannerControlUtil.clearPlayerParticipation(siege, playerUUID);
+		SiegeWarBannerControlUtil.clearPlayerParticipations(siege, affectedPlayers);
 		savePlayerSideOverrides(siege);
 	}
 
@@ -91,8 +90,7 @@ public class SiegeWarAPI {
 		for (UUID playerUUID : affectedPlayers)
 			siege.setPlayerSideOverride(playerUUID, updates.get(playerUUID));
 		if (siege.isPlayerSideOverridesEnabled())
-			for (UUID playerUUID : affectedPlayers)
-				SiegeWarBannerControlUtil.clearPlayerParticipation(siege, playerUUID);
+			SiegeWarBannerControlUtil.clearPlayerParticipations(siege, affectedPlayers);
 		savePlayerSideOverrides(siege);
 	}
 
