@@ -1,6 +1,7 @@
 package com.gmail.goosius.siegewar;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -73,6 +74,25 @@ public class SiegeWarAPI {
 		siege.setPlayerSideOverride(playerUUID, side);
 		if (siege.isPlayerSideOverridesEnabled())
 			SiegeWarBannerControlUtil.clearPlayerParticipation(siege, playerUUID);
+		savePlayerSideOverrides(siege);
+	}
+
+	public static void setPlayerSideOverrides(@NotNull Siege siege, @NotNull Map<UUID, SiegeSide> overrides) {
+		requireActiveSiege(siege);
+		Map<UUID, SiegeSide> updates = new HashMap<>(Objects.requireNonNull(overrides, "overrides"));
+		for (UUID playerUUID : updates.keySet())
+			Objects.requireNonNull(playerUUID, "playerUUID");
+		Set<UUID> affectedPlayers = new HashSet<>();
+		for (Map.Entry<UUID, SiegeSide> entry : updates.entrySet())
+			if (siege.getPlayerSideOverride(entry.getKey()) != entry.getValue())
+				affectedPlayers.add(entry.getKey());
+		if (affectedPlayers.isEmpty())
+			return;
+		for (UUID playerUUID : affectedPlayers)
+			siege.setPlayerSideOverride(playerUUID, updates.get(playerUUID));
+		if (siege.isPlayerSideOverridesEnabled())
+			for (UUID playerUUID : affectedPlayers)
+				SiegeWarBannerControlUtil.clearPlayerParticipation(siege, playerUUID);
 		savePlayerSideOverrides(siege);
 	}
 
