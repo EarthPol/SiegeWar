@@ -66,6 +66,8 @@ public class SiegeWarBannerControlUtil {
 	}
 
 	public static void evaluateBannerControl(Siege siege) {
+		if (!siege.isSiegeTypeAvailable())
+			return;
 		try {
 			if(siege.getStatus() == SiegeStatus.IN_PROGRESS) {
 				evaluateBannerControlPoints(siege);
@@ -327,7 +329,7 @@ public class SiegeWarBannerControlUtil {
 		//Award battle points
 		int battlePoints = 0;
 		int sessionNumber = Math.min(siege.getNumBattleSessionsCompleted() + 1,
-				SiegeWarSettings.getSiegeDurationBattleSessions());
+				siege.getBattleSessionsRequired());
 		switch(siege.getBannerControllingSide()) {
 			case ATTACKERS:
 				battlePoints = siege.getBannerControllingResidents().size() * SiegeWarSettings.getWarBattlePointsForAttackerOccupation();

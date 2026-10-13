@@ -55,6 +55,8 @@ public class InvadeTown {
 	 * @param siege the siege
 	 */
     public static void invadeTown(Nation invadingNation, Town targetTown, Siege siege)  {
+		if (!siege.allowsInvading())
+			return;
 		Nation nationOfInvadedTown = targetTown.getNationOrNull();
 
 		/*
@@ -100,6 +102,10 @@ public class InvadeTown {
 
 	private static void allowInvasionOrThrow(Player player, Nation residentsNation, Town targetTown, Siege siege) throws TownyException {
 		final Translator translator = Translator.locale(player);
+		if (!siege.isSiegeTypeAvailable())
+			throw new TownyException(translator.of("msg_err_custom_siege_type_unavailable", siege.getSiegeTypeId()));
+		if (!siege.allowsInvading())
+			throw new TownyException(translator.of("msg_err_siege_type_invading_disabled", siege.getTranslatedSiegeTypeName()));
 		if(!SiegeWarSettings.getWarSiegeInvadeEnabled())
 			throw new TownyException(translator.of("msg_err_invading_disabled_in_the_config"));
 

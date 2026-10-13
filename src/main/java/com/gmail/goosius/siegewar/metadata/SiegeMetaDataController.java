@@ -6,10 +6,15 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.Nullable;
+import org.bukkit.NamespacedKey;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import com.gmail.goosius.siegewar.SiegeWar;
 import com.gmail.goosius.siegewar.enums.SiegeSide;
 import com.palmergames.bukkit.towny.object.Town;
+import com.palmergames.bukkit.towny.object.Translatable;
 import com.palmergames.bukkit.towny.object.metadata.BooleanDataField;
 import com.palmergames.bukkit.towny.object.metadata.DecimalDataField;
 import com.palmergames.bukkit.towny.object.metadata.IntegerDataField;
@@ -54,6 +59,12 @@ public class SiegeMetaDataController {
 	private static DecimalDataField siegeEndedAtMillis = new DecimalDataField("siegewar_endedAtMillis", 0.0);
 	private static final BooleanDataField playerSideOverridesEnabled = new BooleanDataField("siegewar_playerSideOverridesEnabled", false);
 	private static final StringDataField playerSideOverrides = new StringDataField("siegewar_playerSideOverrides", "");
+	private static final StringDataField customSiegeTypeId = new StringDataField("siegewar_customTypeId", "");
+	private static final StringDataField customData = new StringDataField("siegewar_customData", "");
+	private static final IntegerDataField battleSessionsRequired = new IntegerDataField("siegewar_battleSessionsRequired", 0);
+	private static final StringDataField customVictoryId = new StringDataField("siegewar_customVictoryId", "");
+	private static final StringDataField customVictoryName = new StringDataField("siegewar_customVictoryName", "");
+	private static final Gson gson = new Gson();
 	
 	public SiegeMetaDataController(SiegeWar plugin) {
 		this.plugin = plugin;
@@ -378,6 +389,16 @@ public class SiegeMetaDataController {
 	}
 
 	public static void removeSiegeMeta (Town town) {
+		if (town.hasMeta(battleSessionsRequired.getKey()))
+			town.removeMetaData(battleSessionsRequired);
+		if (town.hasMeta(customVictoryId.getKey()))
+			town.removeMetaData(customVictoryId);
+		if (town.hasMeta(customVictoryName.getKey()))
+			town.removeMetaData(customVictoryName);
+		if (town.hasMeta(customSiegeTypeId.getKey()))
+			town.removeMetaData(customSiegeTypeId);
+		if (town.hasMeta(customData.getKey()))
+			town.removeMetaData(customData);
 		if (town.hasMeta(playerSideOverridesEnabled.getKey()))
 			town.removeMetaData(playerSideOverridesEnabled);
 		if (town.hasMeta(playerSideOverrides.getKey()))
@@ -452,6 +473,77 @@ public class SiegeMetaDataController {
 		idf = (IntegerDataField) numBattleSessionsCompleted.clone();
 		if (town.hasMeta(idf.getKey()))
 			town.removeMetaData(idf);
+	}
+
+	public static NamespacedKey getCustomSiegeTypeId(Town town) {
+		if (!town.hasMeta(customSiegeTypeId.getKey()))
+			return null;
+		String stored = MetaDataUtil.getString(town, customSiegeTypeId);
+		NamespacedKey id = NamespacedKey.fromString(stored);
+		if (id == null)
+			throw new IllegalArgumentException("Invalid custom siege type for town " + town.getName());
+		return id;
+	}
+
+	public static Integer getBattleSessionsRequired(Town town) {
+		return town.hasMeta(battleSessionsRequired.getKey()) ? MetaDataUtil.getInt(town, battleSessionsRequired) : null;
+	}
+
+	public static void setBattleSessionsRequired(Town town, Integer sessions) {
+		if (sessions != null) {
+			if (sessions <= 0)
+				throw new IllegalArgumentException("Required battle sessions must be positive");
+			MetaDataUtil.setInt(town, battleSessionsRequired, sessions, false);
+		} else if (town.hasMeta(battleSessionsRequired.getKey()))
+			town.removeMetaData(battleSessionsRequired);
+	}
+
+	public static NamespacedKey getCustomVictoryId(Town town) {
+		if (!town.hasMeta(customVictoryId.getKey()))
+			return null;
+		NamespacedKey id = NamespacedKey.fromString(MetaDataUtil.getString(town, customVictoryId));
+		if (id == null)
+			throw new IllegalArgumentException("Invalid custom victory for town " + town.getName());
+		return id;
+	}
+
+	public static String getCustomVictoryName(Town town) {
+		return MetaDataUtil.getString(town, customVictoryName);
+	}
+
+	public static void setCustomVictory(Town town, NamespacedKey id, Translatable name) {
+		if (id != null) {
+			String displayName = name.defaultLocale();
+			MetaDataUtil.setString(town, customVictoryId, id.toString(), false);
+			MetaDataUtil.setString(town, customVictoryName, displayName, false);
+		} else {
+			if (town.hasMeta(customVictoryId.getKey()))
+				town.removeMetaData(customVictoryId);
+			if (town.hasMeta(customVictoryName.getKey()))
+				town.removeMetaData(customVictoryName);
+		}
+	}
+
+	public static void setCustomSiegeTypeId(Town town, NamespacedKey id) {
+		if (id != null)
+			MetaDataUtil.setString(town, customSiegeTypeId, id.toString(), false);
+		else if (town.hasMeta(customSiegeTypeId.getKey()))
+			town.removeMetaData(customSiegeTypeId);
+	}
+
+	public static Map<String, String> getCustomData(Town town) {
+		if (!town.hasMeta(customData.getKey()))
+			return Map.of();
+		Map<String, String> data = gson.fromJson(MetaDataUtil.getString(town, customData),
+				new TypeToken<Map<String, String>>() {}.getType());
+		return Map.copyOf(data);
+	}
+
+	public static void setCustomData(Town town, Map<String, String> data) {
+		if (!data.isEmpty())
+			MetaDataUtil.setString(town, customData, gson.toJson(data), false);
+		else if (town.hasMeta(customData.getKey()))
+			town.removeMetaData(customData);
 	}
 	
 }

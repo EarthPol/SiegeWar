@@ -292,7 +292,7 @@ public class SiegeWarStatusScreenListener implements Listener {
 				out.add(translator.of("status_town_siege_defender", siege.getDefenderNameForDisplay()));
 
 				// > Type: Conquest
-				out.add(translator.of("status_town_siege_type", siege.getSiegeType().getTranslatedName()));
+				out.add(translator.of("status_town_siege_type", siege.getTranslatedSiegeTypeName()));
 
 				switch (siegeStatus) {
 					case IN_PROGRESS:
@@ -305,7 +305,7 @@ public class SiegeWarStatusScreenListener implements Listener {
 						}
 
 						// >  Progress: 5/7
-						out.add(translator.of("status_town_siege_progress", siege.getNumBattleSessionsCompleted(), SiegeWarSettings.getSiegeDurationBattleSessions()));
+						out.add(translator.of("status_town_siege_progress", siege.getNumBattleSessionsCompleted(), siege.getBattleSessionsRequired()));
 				}
 
 				// > Status: Contested
@@ -416,6 +416,8 @@ public class SiegeWarStatusScreenListener implements Listener {
 	}
 
 	public static String getStatusTownSiegeSummary(@NotNull Siege siege, Translator translator) {
+		if (siege.getCustomVictoryId() != null)
+			return siege.getTranslatedStatusName().translate(translator.locale());
         switch (siege.getStatus()) {
             case IN_PROGRESS:
                 return translator.of("status_town_siege_status_in_progress");

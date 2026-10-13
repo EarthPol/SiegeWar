@@ -99,7 +99,7 @@ public class PAPIPlaceholderExpansion extends PlaceholderExpansion {
 				yield "";
 			yield switch (siege.getStatus()) {
 			case IN_PROGRESS, PENDING_ATTACKER_ABANDON, PENDING_DEFENDER_SURRENDER ->
-				translator.of("status_town_siege_progress", siege.getNumBattleSessionsCompleted(), SiegeWarSettings.getSiegeDurationBattleSessions());
+				translator.of("status_town_siege_progress", siege.getNumBattleSessionsCompleted(), siege.getBattleSessionsRequired());
 			default -> "";
 			};
 		}

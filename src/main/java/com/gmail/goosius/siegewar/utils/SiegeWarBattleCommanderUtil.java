@@ -30,7 +30,7 @@ public class SiegeWarBattleCommanderUtil {
         String attackingCommanderName;
         String defendingCommanderName;
         for(Siege siege: SiegeController.getSieges()) {
-            if(siege.getStatus().isActive()) {
+            if(siege.isSiegeTypeAvailable() && siege.getStatus().isActive()) {
                 //Wipe the current commanders
                 siege.setAttackingCommander(null);
                 siege.setDefendingCommander(null);

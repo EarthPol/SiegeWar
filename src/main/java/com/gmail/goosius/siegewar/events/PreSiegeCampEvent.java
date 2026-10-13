@@ -6,7 +6,10 @@ import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
 import com.palmergames.bukkit.towny.object.Nation;
 import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.towny.object.TownBlock;
+import com.palmergames.bukkit.towny.object.Translatable;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -30,7 +33,7 @@ public class PreSiegeCampEvent extends Event implements Cancellable {
     private static final HandlerList handlers = new HandlerList();
     private final SiegeCamp siegeCamp;
     private boolean isCancelled;
-    private String cancellationMsg = "SiegeCamp prevented by another plugin.";
+    private Translatable cancellationMessage = Translatable.of("msg_siege_camp_cancelled");
 
     public PreSiegeCampEvent(SiegeCamp camp){
         this.siegeCamp = camp;
@@ -51,7 +54,35 @@ public class PreSiegeCampEvent extends Event implements Cancellable {
     }
 
     public Nation getNation() {
-        return siegeCamp.getSiegeType().equals(SiegeType.REVOLT) ? (Nation) siegeCamp.getDefender() : (Nation) siegeCamp.getAttacker();
+        return (Nation) siegeCamp.getAttacker();
+    }
+
+    public SiegeCamp getCamp() {
+        return siegeCamp;
+    }
+
+    public Player getSiegeStarter() {
+        return siegeCamp.getPlayer();
+    }
+
+    public NamespacedKey getSiegeTypeId() {
+        return siegeCamp.getSiegeTypeId();
+    }
+
+    public NamespacedKey getCustomSiegeTypeId() {
+        return siegeCamp.getCustomSiegeTypeId();
+    }
+
+    public void setCustomSiegeTypeId(NamespacedKey id) {
+        siegeCamp.setCustomSiegeTypeId(id);
+    }
+
+    public boolean isSkipSiegeCamp() {
+        return siegeCamp.isSkipSiegeCamp();
+    }
+
+    public void setSkipSiegeCamp(boolean skip) {
+        siegeCamp.setSkipSiegeCamp(skip);
     }
 
     public Block getFlag() {
@@ -77,11 +108,19 @@ public class PreSiegeCampEvent extends Event implements Cancellable {
     }
 
     public String getCancellationMsg() {
-        return cancellationMsg;
+        return cancellationMessage == null ? null : cancellationMessage.defaultLocale();
     }
 
     public void setCancellationMsg(String cancellationMsg) {
-        this.cancellationMsg = cancellationMsg;
+        cancellationMessage = cancellationMsg == null ? null : Translatable.literal(cancellationMsg);
+    }
+
+    public Translatable getCancellationMessage() {
+        return cancellationMessage;
+    }
+
+    public void setCancellationMessage(Translatable message) {
+        cancellationMessage = message;
     }
 
     public SiegeType getSiegeType() {

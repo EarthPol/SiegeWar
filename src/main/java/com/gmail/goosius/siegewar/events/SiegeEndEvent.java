@@ -3,6 +3,7 @@ package com.gmail.goosius.siegewar.events;
 import com.gmail.goosius.siegewar.objects.Siege;
 import com.palmergames.bukkit.towny.object.Nation;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
@@ -24,6 +25,7 @@ public class SiegeEndEvent extends Event {
     private static final HandlerList handlers = new HandlerList();
     private final Siege siege;
     private final String siegeType;
+    private final NamespacedKey siegeTypeId;
     private final String siegeWinner;
     private final String attackerName;
     private final String defenderName;
@@ -34,6 +36,7 @@ public class SiegeEndEvent extends Event {
         super(!Bukkit.getServer().isPrimaryThread());
         this.siege = siege;
         this.siegeType = siege.getSiegeType().getName();
+        this.siegeTypeId = siege.getSiegeTypeId();
         this.siegeWinner = siege.getSiegeWinner().name();
         this.attackerName = siege.getAttackerName();
         this.defenderName = siege.getDefenderName();
@@ -56,6 +59,10 @@ public class SiegeEndEvent extends Event {
      */
     public Siege getSiege() {
         return siege;
+    }
+
+    public NamespacedKey getSiegeTypeId() {
+        return siegeTypeId;
     }
 
     /**

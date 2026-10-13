@@ -3,10 +3,10 @@ package com.gmail.goosius.siegewar.playeractions;
 import com.gmail.goosius.siegewar.Messaging;
 import com.gmail.goosius.siegewar.SiegeController;
 import com.gmail.goosius.siegewar.enums.SiegeStatus;
+import com.gmail.goosius.siegewar.enums.SiegeSide;
 import com.gmail.goosius.siegewar.enums.SiegeWarPermissionNodes;
 import com.gmail.goosius.siegewar.objects.Siege;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
-import com.gmail.goosius.siegewar.timeractions.DefenderWin;
 import com.palmergames.bukkit.towny.TownyUniverse;
 import com.palmergames.bukkit.towny.confirmations.Confirmation;
 import com.palmergames.bukkit.towny.exceptions.TownyException;
@@ -28,6 +28,9 @@ public class AbandonAttack {
 	 * @throws TownyException
 	 */
 	public static void processAbandonAttackRequest(Player player, Siege siege) throws TownyException {
+		if (!siege.isSiegeTypeAvailable())
+			throw new TownyException(Translatable.of("msg_err_custom_siege_type_unavailable", siege.getSiegeTypeId()));
+
 		if(!SiegeWarSettings.getWarSiegeAbandonEnabled())
 			throw new TownyException(Translatable.of("msg_err_abandoning_attack_disabled_in_the_config"));
 
@@ -41,21 +44,28 @@ public class AbandonAttack {
 	}
 
     public static void abandonAttack(Siege siege) {
+		if (!siege.isSiegeTypeAvailable())
+			return;
+
 		//Send global message
-		Messaging.sendGlobalMessage(getAbandonMessage(siege));
 		//Do abandon
 		if(!siege.hasCompletedAllBattleSessions()) {
+			Messaging.sendGlobalMessage(getAbandonMessage(siege));
 			//Pending abandon
 			siege.setStatus(SiegeStatus.PENDING_ATTACKER_ABANDON);
 			SiegeController.saveSiege(siege);
 		} else {
 			//Immediate abandon
-			siege.setStatus(SiegeStatus.ATTACKER_ABANDON);
-			DefenderWin.defenderWin(siege);
+			SiegeController.completeSiegeWithStatus(siege, SiegeSide.DEFENDERS,
+					SiegeStatus.ATTACKER_ABANDON, getAbandonMessage(siege));
 		}
 	}
 
 	private static Translatable getAbandonMessage(Siege siege) {
+		if (siege.isCustomSiegeType())
+			return Translatable.of(siege.hasCompletedAllBattleSessions()
+					? "msg_custom_siege_attacker_abandon_confirmed" : "msg_custom_siege_attacker_abandon",
+					siege.getTranslatedSiegeTypeName(), siege.getTown().getName(), siege.getAttacker().getName());
 		Translatable message;
 		String key;
 		if (!siege.hasCompletedAllBattleSessions()) {

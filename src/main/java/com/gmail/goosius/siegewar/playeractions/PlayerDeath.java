@@ -103,7 +103,7 @@ public class PlayerDeath {
 		for (Siege candidateSiege : SiegeController.getSieges()) {
 
 			//Skip if siege is not active
-			if (!candidateSiege.getStatus().isActive())
+			if (!candidateSiege.isSiegeTypeAvailable() || !candidateSiege.getStatus().isActive())
 				continue;
 
 			//Skip if player is not is siege-zone

@@ -4,8 +4,10 @@ import com.gmail.goosius.siegewar.Messaging;
 import com.gmail.goosius.siegewar.SiegeController;
 import com.gmail.goosius.siegewar.TownOccupationController;
 import com.gmail.goosius.siegewar.enums.SiegeStatus;
+import com.gmail.goosius.siegewar.enums.SiegeType;
 import com.gmail.goosius.siegewar.events.TownPlunderedEvent;
 import com.gmail.goosius.siegewar.objects.Siege;
+import com.gmail.goosius.siegewar.objects.SiegeCamp;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
 import com.gmail.goosius.siegewar.utils.SiegeWarBlockProtectionUtil;
 import com.gmail.goosius.siegewar.utils.SiegeWarBlockUtil;
@@ -300,33 +302,40 @@ public class PlaceBlock {
 													 			  Town nearbyTown,
 													 			  Block bannerBlock) throws TownyException {
 		final Translator translator = Translator.locale(player);
+		SiegeType baseType = residentsTown == nearbyTown ? SiegeType.REVOLT : SiegeType.CONQUEST;
+		Nation attacker = baseType == SiegeType.REVOLT ? nearbyTown.getNationOrNull() : residentsNation;
+		SiegeCamp camp = new SiegeCamp(player, bannerBlock, baseType, nearbyTown, attacker, nearbyTown, residentsTown, nearbyTownBlock);
+		SiegeController.prepareSiegeCamp(camp);
 		if (nearbyTown.isRuined())
 			throw new TownyException(translator.of("msg_err_cannot_start_siege_at_ruined_town"));
 
-		if (!SiegeWarSettings.doesTodayAllowASiegeToStart())
+		if (!camp.isSkipSiegeValidation() && !SiegeWarSettings.doesTodayAllowASiegeToStart())
 			throw new TownyException(translator.of("msg_err_cannot_start_sieges_today"));
 
-		if (residentsTown == nearbyTown) {
+		if (camp.getSiegeType() == SiegeType.REVOLT) {
 			// Throws exception if town cannot pay.
 			SiegeWarMoneyUtil.throwIfTownCannotAffordToStartSiege(nearbyTown);
 			//Start Revolt siege
-			StartRevoltSiege.processStartSiegeRequest(player, residentsTown, residentsNation, nearbyTownBlock, nearbyTown, bannerBlock);
+			if (!camp.isSkipSiegeValidation())
+				StartRevoltSiege.validateStartSiegeRequest(camp);
+			SiegeController.startSiegeCampProcess(camp);
 			// Replace unstable block below banner.
 			if(SiegeWarBlockUtil.isSupportBlockUnstable(bannerBlock))
 				bannerBlock.getRelative(BlockFace.DOWN).setType(Material.STONE);
 			//Immediately remove occupation
-			TownOccupationController.removeTownOccupation(nearbyTown);
+			if (camp.getCustomSiegeTypeId() == null)
+				TownOccupationController.removeTownOccupation(nearbyTown);
 		} else {
 			if (residentsNation == null)
 				throw new TownyException(translator.of("msg_err_siege_war_action_not_a_nation_member"));
 
-			if (SiegeWarImmunityUtil.isTownSiegeImmune(nearbyTown))
+			if (!camp.isSkipSiegeValidation() && SiegeWarImmunityUtil.isTownSiegeImmune(nearbyTown))
 				throw new TownyException(translator.of("msg_err_cannot_start_siege_due_to_siege_immunity"));
 
 			// Throws exception if nation cannot pay.
 			SiegeWarMoneyUtil.throwIfNationCannotAffordToStartSiege(residentsNation, nearbyTown);
 
-			if (SiegeWarSettings.doesThisNationHaveTooManyActiveSieges(residentsNation))
+			if (!camp.isSkipSiegeValidation() && SiegeWarSettings.doesThisNationHaveTooManyActiveSieges(residentsNation))
 				throw new TownyException(translator.of("msg_err_siege_war_nation_has_too_many_active_siege_attacks"));
 
 			// Replace unstable block below banner.
@@ -334,7 +343,9 @@ public class PlaceBlock {
 				bannerBlock.getRelative(BlockFace.DOWN).setType(Material.STONE);
 
 			//Conquest siege
-			StartConquestSiege.processStartSiegeRequest(player, residentsTown, residentsNation, nearbyTownBlock, nearbyTown, bannerBlock);
+			if (!camp.isSkipSiegeValidation())
+				StartConquestSiege.validateStartSiegeRequest(camp);
+			SiegeController.startSiegeCampProcess(camp);
 		}
 	}
 

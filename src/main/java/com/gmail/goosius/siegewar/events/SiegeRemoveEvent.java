@@ -9,6 +9,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
@@ -27,6 +28,7 @@ public class SiegeRemoveEvent extends Event {
     private static final HandlerList handlers = new HandlerList();
     private final Siege siege;
     private final String siegeType;
+    private final NamespacedKey siegeTypeId;
     private final String siegeWinner;
     private final String attackerName;
     private final String defenderName;
@@ -38,6 +40,7 @@ public class SiegeRemoveEvent extends Event {
         super(!Bukkit.getServer().isPrimaryThread());
         this.siege = siege;
         this.siegeType = siege.getSiegeType().getName();
+        this.siegeTypeId = siege.getSiegeTypeId();
         this.siegeWinner = siege.getSiegeWinner().name();
         this.attackerName = siege.getAttackerName();
         this.defenderName = siege.getDefenderName();
@@ -61,6 +64,10 @@ public class SiegeRemoveEvent extends Event {
      */
     public Siege getSiege() {
         return siege;
+    }
+
+    public NamespacedKey getSiegeTypeId() {
+        return siegeTypeId;
     }
 
     /**

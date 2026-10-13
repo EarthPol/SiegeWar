@@ -12,17 +12,22 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import com.gmail.goosius.siegewar.enums.SiegeStatus;
 import com.gmail.goosius.siegewar.enums.SiegeSide;
+import com.gmail.goosius.siegewar.enums.SiegeType;
+import com.gmail.goosius.siegewar.api.SiegeTypeDefinition;
 import com.gmail.goosius.siegewar.metadata.SiegeMetaDataController;
 import com.gmail.goosius.siegewar.objects.BannerControlSession;
 import com.gmail.goosius.siegewar.objects.BattleSession;
 import com.gmail.goosius.siegewar.objects.Siege;
+import com.gmail.goosius.siegewar.objects.SiegeCamp;
 import com.gmail.goosius.siegewar.utils.SiegeWarDistanceUtil;
 import com.gmail.goosius.siegewar.utils.SiegeWarBannerControlUtil;
 import com.palmergames.bukkit.towny.TownyAPI;
@@ -34,6 +39,89 @@ import com.palmergames.bukkit.towny.object.TownBlock;
 import com.palmergames.bukkit.towny.object.Translatable;
 
 public class SiegeWarAPI {
+
+	public static void registerSiegeType(@NotNull Plugin owner, @NotNull NamespacedKey id, @NotNull SiegeTypeDefinition definition) {
+		SiegeTypeRegistry.register(owner, id, definition);
+	}
+
+	public static boolean unregisterSiegeType(@NotNull Plugin owner, @NotNull NamespacedKey id) {
+		return SiegeTypeRegistry.unregister(owner, id);
+	}
+
+	public static Map<NamespacedKey, SiegeTypeDefinition> getRegisteredSiegeTypes() {
+		return SiegeTypeRegistry.getTypes();
+	}
+
+	@Nullable
+	public static SiegeTypeDefinition getSiegeTypeDefinitionOrNull(@NotNull NamespacedKey id) {
+		return SiegeTypeRegistry.getDefinition(id);
+	}
+
+	public static NamespacedKey getSiegeTypeId(@NotNull Siege siege) {
+		return siege.getSiegeTypeId();
+	}
+
+	public static void startSiege(@NotNull SiegeCamp camp) throws TownyException {
+		Objects.requireNonNull(camp, "camp");
+		camp.setLegacyPlayerEventsEnabled(camp.getPlayer() != null);
+		SiegeController.prepareSiegeCamp(camp);
+		SiegeController.validatePreparedSiegeCamp(camp);
+		SiegeController.startSiegeCampProcess(camp);
+		if (camp.getSiegeType() == SiegeType.REVOLT && camp.getCustomSiegeTypeId() == null)
+			TownOccupationController.removeTownOccupation(camp.getTargetTown());
+	}
+
+	public static Map<String, String> getCustomSiegeData(@NotNull Siege siege) {
+		return siege.getCustomData();
+	}
+
+	public static void setCustomSiegeData(@NotNull Siege siege, @NotNull Map<String, String> data) {
+		if (SiegeController.getSiege(siege.getTown()) != siege)
+			throw new IllegalArgumentException("Custom siege data requires a loaded siege");
+		Map<String, String> values = Map.copyOf(data);
+		if (!siege.getCustomData().equals(values)) {
+			siege.setCustomData(values);
+			SiegeMetaDataController.setCustomData(siege.getTown(), values);
+			siege.getTown().save();
+		}
+	}
+
+	public static void completeSiege(@NotNull Siege siege, @NotNull SiegeSide winner) throws TownyException {
+		completeSiege(siege, winner, null, null);
+	}
+
+	public static void completeSiege(@NotNull Siege siege, @NotNull SiegeSide winner,
+			@Nullable NamespacedKey victoryId, @Nullable Translatable victoryName) throws TownyException {
+		Objects.requireNonNull(siege, "siege");
+		if (SiegeController.getSiege(siege.getTown()) != siege || siege.getStatus() == null || !isActive(siege))
+			throw new IllegalArgumentException("Siege completion requires a loaded, active siege");
+		Objects.requireNonNull(winner, "winner");
+		if (!siege.isSiegeTypeAvailable())
+			throw new TownyException(Translatable.of("msg_err_custom_siege_type_unavailable", siege.getSiegeTypeId()));
+		if ((victoryId == null) != (victoryName == null))
+			throw new IllegalArgumentException("Custom victory ID and name must be supplied together");
+		SiegeController.completeSiege(siege, winner, victoryId, victoryName);
+	}
+
+	@Nullable
+	public static NamespacedKey getVictoryId(@NotNull Siege siege) {
+		return siege.getVictoryId();
+	}
+
+	public static int getBattleSessionsRequired(@NotNull Siege siege) {
+		return siege.getBattleSessionsRequired();
+	}
+
+	public static void setBattleSessionsRequired(@NotNull Siege siege, @Nullable Integer sessions) {
+		Objects.requireNonNull(siege, "siege");
+		if (SiegeController.getSiege(siege.getTown()) != siege || siege.getStatus() == null || !isActive(siege))
+			throw new IllegalArgumentException("Session requirements require a loaded, active siege");
+		if (!Objects.equals(siege.getBattleSessionsRequiredOverride(), sessions)) {
+			siege.setBattleSessionsRequired(sessions);
+			SiegeMetaDataController.setBattleSessionsRequired(siege.getTown(), sessions);
+			siege.getTown().save();
+		}
+	}
 
 	public static SiegeSide getPlayerSiegeSide(@NotNull Siege siege, @NotNull Player player) {
 		return SiegeSide.getPlayerSiegeSide(siege, player);

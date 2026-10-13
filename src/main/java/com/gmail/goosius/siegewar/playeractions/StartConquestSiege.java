@@ -4,6 +4,7 @@ package com.gmail.goosius.siegewar.playeractions;
 import com.gmail.goosius.siegewar.SiegeController;
 import com.gmail.goosius.siegewar.enums.SiegeType;
 import com.gmail.goosius.siegewar.enums.SiegeWarPermissionNodes;
+import com.gmail.goosius.siegewar.objects.SiegeCamp;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
 import com.gmail.goosius.siegewar.utils.SiegeWarDistanceUtil;
 import com.gmail.goosius.siegewar.utils.SiegeWarNationUtil;
@@ -77,6 +78,10 @@ public class StartConquestSiege {
 		SiegeWarDistanceUtil.throwIfTownIsTooFarFromNationCapitalByDistance(nationOfSiegeStarter, targetTown);
 
 		SiegeWarNationUtil.throwIfNationHasTooManyTowns(nationOfSiegeStarter);
+	}
+
+	public static void validateStartSiegeRequest(SiegeCamp camp) throws TownyException {
+		allowSiegeOrThrow(camp.getPlayer(), (Nation) camp.getAttacker(), camp.getTargetTown());
 	}
 
 }

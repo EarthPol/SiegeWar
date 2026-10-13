@@ -53,12 +53,12 @@ public class SiegeWarHud implements HUDImplementer {
 		hud.setTitle(uuid, miniMessage(translator.of("hud_title", SiegeHUDManager.checkLength(siege.getTown().getName()))));
 
 		LinkedList<Component> sbComponents = new LinkedList<>();
-		sbComponents.add(miniMessage(translator.of("hud_siege_type"), SiegeHUDManager.checkLength(siege.getSiegeType().getTranslatedName().forLocale(player))));
+		sbComponents.add(miniMessage(translator.of("hud_siege_type"), SiegeHUDManager.checkLength(siege.getTranslatedSiegeTypeName().forLocale(player))));
 		sbComponents.add(miniMessage(translator.of("hud_attackers"), SiegeHUDManager.checkLength(siege.getAttackerNameForDisplay())));
 		sbComponents.add(miniMessage(translator.of("hud_defenders"), SiegeHUDManager.checkLength(siege.getDefenderNameForDisplay())));
 		sbComponents.add(miniMessage(translator.of("hud_siege_balance"), siege.getSiegeBalance().toString()));
-		sbComponents.add(miniMessage(translator.of("hud_siege_progress"), siege.getNumBattleSessionsCompleted() + "/" + SiegeWarSettings.getSiegeDurationBattleSessions()));
-		sbComponents.add(miniMessage(translator.of("hud_siege_status"), siege.getStatus().getName()));
+		sbComponents.add(miniMessage(translator.of("hud_siege_progress"), siege.getNumBattleSessionsCompleted() + "/" + siege.getBattleSessionsRequired()));
+		sbComponents.add(miniMessage(translator.of("hud_siege_status"), siege.getTranslatedStatusName().forLocale(player)));
 		sbComponents.add(miniMessage(translator.of("hud_warchest"), (TownyEconomyHandler.isActive() ? TownyEconomyHandler.getFormattedBalance(siege.getWarChestAmount()) : "-")));
 		sbComponents.add(miniMessage(translator.of("hud_banner_control"), (siege.getBannerControllingSide().getFormattedName().forLocale(player)
 				+ (siege.getBannerControllingSide() == SiegeSide.NOBODY ? "" : " (" + siege.getBannerControllingResidents().size() + ")"))));

@@ -3,11 +3,14 @@ package com.gmail.goosius.siegewar.objects;
 import com.gmail.goosius.siegewar.enums.SiegeSide;
 import com.gmail.goosius.siegewar.enums.SiegeStatus;
 import com.gmail.goosius.siegewar.enums.SiegeType;
+import com.gmail.goosius.siegewar.SiegeTypeRegistry;
+import com.gmail.goosius.siegewar.api.SiegeTypeDefinition;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.object.Government;
 import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Town;
+import com.palmergames.bukkit.towny.object.Translatable;
 import com.palmergames.bukkit.towny.object.Translation;
 import com.palmergames.bukkit.towny.object.Translator;
 
@@ -15,6 +18,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
@@ -22,6 +26,7 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -47,6 +52,10 @@ public class Siege {
 	private long startedAtMillis;
 	private long endedAtMillis;
 	private SiegeType siegeType;
+	private NamespacedKey customSiegeTypeId;
+	private Map<String, String> customData = Map.of();
+	private NamespacedKey customVictoryId;
+	private Translatable customVictoryName;
 	private Town town;
 	private Government attacker; //Always the attacking nation
 	private Government defender; //Always the besieged town
@@ -56,6 +65,7 @@ public class Siege {
     private boolean townPlundered;
     private boolean townInvaded;
 	private int numBattleSessionsCompleted;   //When this value hits the server specified max, the siege ends
+	private Integer battleSessionsRequired;
 	private Location siegeBannerLocation;
 	private int siegeBalance;
 	private double warChestAmount;
@@ -133,6 +143,54 @@ public class Siege {
 		return uuid;
 	}
 
+	public NamespacedKey getCustomSiegeTypeId() {
+		return customSiegeTypeId;
+	}
+
+	public void setCustomSiegeTypeId(NamespacedKey id) {
+		customSiegeTypeId = id;
+	}
+
+	public NamespacedKey getSiegeTypeId() {
+		return customSiegeTypeId == null ? new NamespacedKey("siegewar", siegeType.toLowerCase()) : customSiegeTypeId;
+	}
+
+	public boolean isCustomSiegeType() {
+		return customSiegeTypeId != null;
+	}
+
+	public boolean isSiegeTypeAvailable() {
+		if (!isCustomSiegeType())
+			return true;
+		SiegeTypeDefinition definition = SiegeTypeRegistry.getDefinition(customSiegeTypeId);
+		return SiegeTypeRegistry.isAvailable(customSiegeTypeId) && definition != null && definition.getBaseType() == siegeType;
+	}
+
+	public Translatable getTranslatedSiegeTypeName() {
+		if (!isCustomSiegeType())
+			return siegeType.getTranslatedName();
+		SiegeTypeDefinition definition = SiegeTypeRegistry.getDefinition(customSiegeTypeId);
+		return definition == null ? Translatable.of("siege_type_unavailable", customSiegeTypeId.toString()) : definition.getTranslatedName();
+	}
+
+	public boolean allowsInvading() {
+		SiegeTypeDefinition definition = SiegeTypeRegistry.getDefinition(customSiegeTypeId);
+		return !isCustomSiegeType() || (definition != null && isSiegeTypeAvailable() && definition.allowsInvading());
+	}
+
+	public boolean allowsPlundering() {
+		SiegeTypeDefinition definition = SiegeTypeRegistry.getDefinition(customSiegeTypeId);
+		return !isCustomSiegeType() || (definition != null && isSiegeTypeAvailable() && definition.allowsPlundering());
+	}
+
+	public Map<String, String> getCustomData() {
+		return customData;
+	}
+
+	public void setCustomData(Map<String, String> data) {
+		customData = Map.copyOf(data);
+	}
+
 	public void setUUID(UUID uuid) {
 		if (uuid == null) throw new IllegalArgumentException("UUID cannot be null");
 		this.uuid = uuid;
@@ -170,6 +228,31 @@ public class Siege {
         return status;
     }
 
+	public void setCustomVictory(NamespacedKey id, Translatable name) {
+		if ((id == null) != (name == null))
+			throw new IllegalArgumentException("Custom victory ID and name must both be set or both be null");
+		customVictoryId = id;
+		customVictoryName = name;
+	}
+
+	public NamespacedKey getCustomVictoryId() {
+		return customVictoryId;
+	}
+
+	public Translatable getCustomVictoryName() {
+		return customVictoryName;
+	}
+
+	public NamespacedKey getVictoryId() {
+		if (status == null || status.isActive())
+			return null;
+		return customVictoryId == null ? new NamespacedKey("siegewar", status.name().toLowerCase(Locale.ROOT)) : customVictoryId;
+	}
+
+	public Translatable getTranslatedStatusName() {
+		return customVictoryName != null && !status.isActive() ? customVictoryName : Translatable.literal(status.getName());
+	}
+
     public boolean isTownPlundered() {
         return townPlundered;
     }
@@ -194,8 +277,22 @@ public class Siege {
 		numBattleSessionsCompleted = num;
 	}
 
+	public int getBattleSessionsRequired() {
+		return battleSessionsRequired == null ? SiegeWarSettings.getSiegeDurationBattleSessions() : battleSessionsRequired;
+	}
+
+	public Integer getBattleSessionsRequiredOverride() {
+		return battleSessionsRequired;
+	}
+
+	public void setBattleSessionsRequired(Integer sessions) {
+		if (sessions != null && sessions <= 0)
+			throw new IllegalArgumentException("Battle sessions required must be positive");
+		battleSessionsRequired = sessions;
+	}
+
 	public boolean hasCompletedAllBattleSessions() {
-		return numBattleSessionsCompleted >= SiegeWarSettings.getSiegeDurationBattleSessions();
+		return numBattleSessionsCompleted >= getBattleSessionsRequired();
 	}
 
 	public Government getAttacker() {

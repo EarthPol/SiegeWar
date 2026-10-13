@@ -372,7 +372,7 @@ public class SiegeWarLoreUtil {
         PersistentDataContainer container = holder.getPersistentDataContainer();
 
         container.set(LORE_ITEM, PersistentDataType.STRING, "siege_banner");
-        container.set(TYPE, PersistentDataType.STRING, siege.getSiegeType().getName());
+        container.set(TYPE, PersistentDataType.STRING, siege.getTranslatedSiegeTypeName().defaultLocale());
         container.set(TOWN, PersistentDataType.STRING, siege.getDefender().getName());
         container.set(ATTACKER, PersistentDataType.STRING, siege.getAttackingNationIfPossibleElseTown().getFormattedName());
         container.set(DEFENDER, PersistentDataType.STRING, siege.getDefendingNationIfPossibleElseTown().getFormattedName());
@@ -389,7 +389,7 @@ public class SiegeWarLoreUtil {
         PersistentDataContainer container = holder.getPersistentDataContainer();
 
         container.set(WINNER, PersistentDataType.STRING, siege.getSiegeWinner().name());
-        container.set(STATUS, PersistentDataType.STRING, siege.getStatus().getName());
+        container.set(STATUS, PersistentDataType.STRING, siege.getTranslatedStatusName().defaultLocale());
         container.set(ATTACKER_POINTS, PersistentDataType.INTEGER, siege.getAttackerBattlePoints());
         container.set(DEFENDER_POINTS, PersistentDataType.INTEGER, siege.getDefenderBattlePoints());
         container.set(END, PersistentDataType.LONG, System.currentTimeMillis());
