@@ -5,6 +5,7 @@ import com.gmail.goosius.siegewar.events.BattleSessionPreStartEvent;
 import com.gmail.goosius.siegewar.events.BattleSessionStartedEvent;
 import com.gmail.goosius.siegewar.events.SiegeCampStartEvent;
 import com.gmail.goosius.siegewar.events.SiegeWarStartEvent;
+import com.gmail.goosius.siegewar.events.SiegeStartedEvent;
 import com.gmail.goosius.siegewar.events.SiegeEndEvent;
 import com.gmail.goosius.siegewar.events.SiegeRemoveEvent;
 import com.gmail.goosius.siegewar.objects.Siege;
@@ -16,6 +17,7 @@ import org.bukkit.event.Listener;
 import com.gmail.goosius.siegewar.SiegeController;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
 import com.palmergames.bukkit.towny.object.Translatable;
+import com.palmergames.bukkit.towny.object.Nation;
 
 import java.awt.Color;
 
@@ -63,6 +65,18 @@ public class SiegeWarSelfListener implements Listener {
 			return;
 
 		DiscordWebhook.sendWebhookNotification(Color.decode("#" + event.getNation().getMapColorHexCode()), event.getMessage());
+	}
+
+	@EventHandler
+	public void onSiegeWarStart(SiegeStartedEvent event) {
+		if (!SiegeWarSettings.isDiscordWebhookEnabled() || !SiegeWarSettings.isSiegeStartNotificationEnabled())
+			return;
+
+		Siege siege = event.getSiege();
+		Nation nation = siege.isRevoltSiege() ? siege.getTown().getNationOrNull()
+				: (Nation) siege.getAttackingNationIfPossibleElseTown();
+		DiscordWebhook.sendWebhookNotification(nation == null ? SiegeWarSettings.getFallbackColor()
+				: Color.decode("#" + nation.getMapColorHexCode()), event.getMessage());
 	}
 
 	@EventHandler

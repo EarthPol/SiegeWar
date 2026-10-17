@@ -9,6 +9,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.NamespacedKey;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
@@ -17,6 +18,7 @@ public class SiegeWarStartEvent extends Event {
 
     private static final HandlerList handlers = new HandlerList();
     private final String siegeType;
+    private final NamespacedKey siegeTypeId;
     private final Siege siege;
     private final Town townOfSiegeStarter;
     private final Player siegeStarter;
@@ -28,6 +30,7 @@ public class SiegeWarStartEvent extends Event {
     public SiegeWarStartEvent(Siege siege, Town townOfSiegeStarter, Player siegeStarter, String message) {
         this.siege = siege;
         this.siegeType = siege.getSiegeType().getName();
+        this.siegeTypeId = siege.getSiegeTypeId();
         this.targetTown = siege.getTown();
         this.townOfSiegeStarter = townOfSiegeStarter;
         this.siegeStarter = siegeStarter;
@@ -48,6 +51,10 @@ public class SiegeWarStartEvent extends Event {
 
     public Siege getSiege() {
         return siege;
+    }
+
+    public NamespacedKey getSiegeTypeId() {
+        return siegeTypeId;
     }
 
     public Town getTownOfSiegeStarter() {

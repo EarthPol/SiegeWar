@@ -3,11 +3,11 @@ package com.gmail.goosius.siegewar.playeractions;
 import com.gmail.goosius.siegewar.Messaging;
 import com.gmail.goosius.siegewar.SiegeController;
 import com.gmail.goosius.siegewar.enums.SiegeStatus;
+import com.gmail.goosius.siegewar.enums.SiegeSide;
 import com.gmail.goosius.siegewar.enums.SiegeType;
 import com.gmail.goosius.siegewar.enums.SiegeWarPermissionNodes;
 import com.gmail.goosius.siegewar.objects.Siege;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
-import com.gmail.goosius.siegewar.timeractions.AttackerWin;
 import com.gmail.goosius.siegewar.TownOccupationController;
 import com.palmergames.bukkit.towny.TownyUniverse;
 import com.palmergames.bukkit.towny.confirmations.Confirmation;
@@ -23,6 +23,9 @@ import org.bukkit.entity.Player;
 public class SurrenderDefence {
 
 	public static void processSurrenderDefenceRequest(Player player, Siege siege) throws TownyException {
+		if (!siege.isSiegeTypeAvailable())
+			throw new TownyException(Translatable.of("msg_err_custom_siege_type_unavailable", siege.getSiegeTypeId()));
+
 		if(!SiegeWarSettings.getWarSiegeSurrenderEnabled())
 			throw new TownyException(Translatable.of("msg_err_town_surrender_disabled_in_the_config").forLocale(player));
 
@@ -39,21 +42,33 @@ public class SurrenderDefence {
 	}
 
     public static void surrenderDefence(Siege siege) {
+		if (!siege.isSiegeTypeAvailable())
+			return;
+
 		//Send global message
-		Messaging.sendGlobalMessage(getSurrenderMessage(siege));
 		//Do surrender
 		if(!siege.hasCompletedAllBattleSessions()) {
+			Messaging.sendGlobalMessage(getSurrenderMessage(siege));
 			//Pending surrender
 			siege.setStatus(SiegeStatus.PENDING_DEFENDER_SURRENDER);
 			SiegeController.saveSiege(siege);
 		} else {
 			//Immediate surrender
-			siege.setStatus(SiegeStatus.DEFENDER_SURRENDER);
-			AttackerWin.attackerWin(siege);
+			String previousMessage = siege.getEndMessage();
+			if (!SiegeController.completeSiegeWithStatus(siege, SiegeSide.ATTACKERS,
+					SiegeStatus.DEFENDER_SURRENDER, getSurrenderMessage(siege)))
+				siege.setEndMessage(previousMessage);
 		}
 	}
 
 	private static Translatable getSurrenderMessage(Siege siege) {
+		if (siege.isCustomSiegeType()) {
+			Translatable message = Translatable.of(siege.hasCompletedAllBattleSessions()
+					? "msg_custom_siege_defender_surrender_confirmed" : "msg_custom_siege_defender_surrender",
+					siege.getTranslatedSiegeTypeName(), siege.getTown().getName(), siege.getAttacker().getName());
+			siege.setEndMessage(message.defaultLocale());
+			return message;
+		}
 		Translatable message;
 		String key;
 		if (!siege.hasCompletedAllBattleSessions()) {

@@ -105,6 +105,10 @@ public class SiegeWarSicknessUtil {
         }
 
         SiegeWar.getSiegeWar().getScheduler().runLater(player, () -> {
+            if (siege.isPlayerSideOverridesEnabled() && isOfficialSiegeParticipant(player, resident, siege)) {
+                playersWithFullWarSickness.remove(player);
+                return;
+            }
             if (SiegeWarDistanceUtil.isInSiegeZone(player, siege)) {
                 if (SiegeWarDistanceUtil.isInANonBesiegedTown(player.getLocation())) {
                     //Special War Sickness

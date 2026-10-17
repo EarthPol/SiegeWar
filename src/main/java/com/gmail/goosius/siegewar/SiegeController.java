@@ -17,13 +17,20 @@ import com.gmail.goosius.siegewar.enums.SiegeSide;
 import com.gmail.goosius.siegewar.enums.SiegeStatus;
 import com.gmail.goosius.siegewar.enums.SiegeType;
 import com.gmail.goosius.siegewar.events.PreSiegeCampEvent;
+import com.gmail.goosius.siegewar.events.PreSiegeEndEvent;
+import com.gmail.goosius.siegewar.events.SiegePrepareEvent;
+import com.gmail.goosius.siegewar.events.SiegeStartedEvent;
+import com.gmail.goosius.siegewar.events.SiegeCompletedEvent;
 import com.gmail.goosius.siegewar.events.SiegeRemoveEvent;
 import com.gmail.goosius.siegewar.events.SiegeCampStartEvent;
 import com.gmail.goosius.siegewar.events.SiegeWarStartEvent;
+import com.gmail.goosius.siegewar.api.SiegeTypeDefinition;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
 import com.gmail.goosius.siegewar.utils.DataCleanupUtil;
 import com.gmail.goosius.siegewar.timeractions.AttackerTimedWin;
 import com.gmail.goosius.siegewar.timeractions.DefenderTimedWin;
+import com.gmail.goosius.siegewar.timeractions.AttackerWin;
+import com.gmail.goosius.siegewar.timeractions.DefenderWin;
 import com.gmail.goosius.siegewar.utils.SiegeCampUtil;
 import com.gmail.goosius.siegewar.utils.SiegeWarDistanceUtil;
 import com.gmail.goosius.siegewar.utils.SiegeWarNationUtil;
@@ -33,7 +40,9 @@ import com.palmergames.bukkit.towny.TownyMessaging;
 import com.palmergames.bukkit.towny.object.Government;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.block.Banner;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
@@ -41,11 +50,16 @@ import org.jetbrains.annotations.Nullable;
 import com.gmail.goosius.siegewar.metadata.SiegeMetaDataController;
 import com.gmail.goosius.siegewar.objects.Siege;
 import com.gmail.goosius.siegewar.objects.SiegeCamp;
+import com.gmail.goosius.siegewar.playeractions.StartConquestSiege;
+import com.gmail.goosius.siegewar.playeractions.StartRevoltSiege;
+import com.gmail.goosius.siegewar.utils.SiegeWarImmunityUtil;
+import com.gmail.goosius.siegewar.utils.SiegeWarTownPeacefulnessUtil;
 import com.gmail.goosius.siegewar.utils.SiegeWarMoneyUtil;
 import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.TownyUniverse;
 import com.palmergames.bukkit.towny.exceptions.TownyException;
 import com.palmergames.bukkit.towny.object.Nation;
+import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.towny.object.TownBlock;
 import com.palmergames.bukkit.towny.object.Translatable;
@@ -62,6 +76,7 @@ public class SiegeController {
 	private static Map<UUID, Siege> townSiegeMap = new ConcurrentHashMap<>();
 	private static List<Town> siegedTowns = new ArrayList<>();
 	private static List<SiegeCamp> siegeCamps = new ArrayList<>();
+	private static final Set<UUID> completingSieges = ConcurrentHashMap.newKeySet();
 
 	public static void newSiege(Town town) {
 		Siege siege = new Siege(town);
@@ -80,6 +95,7 @@ public class SiegeController {
 
 	public static void saveSiege(Siege siege) {
 		Town town = siege.getTown();
+		SiegeMetaDataController.setPlayerSideOverrides(town, siege.isPlayerSideOverridesEnabled(), siege.getPlayerSideOverrides());
 		if (siege.getStartedAtMillis() <= 0L)
 			siege.setStartedAtMillis(System.currentTimeMillis());
 		SiegeMetaDataController.setSiegeUUID(town, siege.getUUID().toString());
@@ -97,6 +113,10 @@ public class SiegeController {
 				+ "!" + siege.getFlagLocation().getY()
 				+ "!" + siege.getFlagLocation().getZ());
 		SiegeMetaDataController.setSiegeType(town, siege.getSiegeType().toString());
+		SiegeMetaDataController.setCustomSiegeTypeId(town, siege.getCustomSiegeTypeId());
+		SiegeMetaDataController.setCustomData(town, siege.getCustomData());
+		SiegeMetaDataController.setBattleSessionsRequired(town, siege.getBattleSessionsRequiredOverride());
+		SiegeMetaDataController.setCustomVictory(town, siege.getCustomVictoryId(), siege.getCustomVictoryName());
 		SiegeMetaDataController.setSiegeStatus(town, siege.getStatus().toString());
 		SiegeMetaDataController.setSiegeBalance(town, siege.getSiegeBalance());
 		SiegeMetaDataController.setAttackerBattlePoints(town, siege.getAttackerBattlePoints());
@@ -155,6 +175,10 @@ public class SiegeController {
 	public static boolean loadSiege(Siege siege) {
 		//Town will be already loaded
 		Town town = siege.getTown();
+		for (UUID playerUUID : siege.getPlayerSideOverrides().keySet())
+			siege.setPlayerSideOverride(playerUUID, null);
+		SiegeMetaDataController.getPlayerSideOverrides(town).forEach(siege::setPlayerSideOverride);
+		siege.setPlayerSideOverridesEnabled(SiegeMetaDataController.isPlayerSideOverridesEnabled(town));
 
 		boolean needsResave = false;
 		try {
@@ -192,6 +216,14 @@ public class SiegeController {
 			siege.setSiegeType(SiegeType.CONQUEST);
 		else
 			siege.setSiegeType(SiegeType.parseString(siegeTypeString));
+		siege.setCustomSiegeTypeId(SiegeMetaDataController.getCustomSiegeTypeId(town));
+		siege.setCustomData(SiegeMetaDataController.getCustomData(town));
+		siege.setBattleSessionsRequired(SiegeMetaDataController.getBattleSessionsRequired(town));
+		NamespacedKey victoryId = SiegeMetaDataController.getCustomVictoryId(town);
+		if (victoryId != null)
+			siege.setCustomVictory(victoryId, Translatable.literal(SiegeMetaDataController.getCustomVictoryName(town)));
+		else
+			siege.setCustomVictory(null, null);
 
 		//Get nation
 		UUID nationUUID = UUID.fromString(SiegeMetaDataController.getAttackerUUID(town));
@@ -264,10 +296,70 @@ public class SiegeController {
 	 * @param siege the siege to end
 	 */
 	public static void endSiegeWithTimedWin(Siege siege) {
-		if (siege.getSiegeBalance() < 1)
-			DefenderTimedWin.defenderTimedWin(siege);
-		else
-			AttackerTimedWin.attackerTimedWin(siege);
+		completeSiege(siege, siege.getSiegeBalance() < 1 ? SiegeSide.DEFENDERS : SiegeSide.ATTACKERS, null, null);
+	}
+
+	public static boolean completeSiege(Siege siege, SiegeSide winner, NamespacedKey victoryId, Translatable victoryName) {
+		return completeSiege(siege, winner, victoryId, victoryName, null, null);
+	}
+
+	public static boolean completeSiegeWithStatus(Siege siege, SiegeSide winner, SiegeStatus status, Translatable message) {
+		return completeSiege(siege, winner, null, null, status, message);
+	}
+
+	private static boolean completeSiege(Siege siege, SiegeSide winner, NamespacedKey victoryId,
+			Translatable victoryName, SiegeStatus standardStatus, Translatable standardMessage) {
+		if (getSiege(siege.getTown()) != siege || !siege.getStatus().isActive() || !siege.isSiegeTypeAvailable()
+				|| !completingSieges.add(siege.getUUID()))
+			return false;
+		try {
+			PreSiegeEndEvent event = new PreSiegeEndEvent(siege, winner, victoryId, victoryName);
+			Bukkit.getPluginManager().callEvent(event);
+			if (event.isCancelled() || getSiege(siege.getTown()) != siege
+					|| !siege.getStatus().isActive() || !siege.isSiegeTypeAvailable())
+				return false;
+			SiegeSide standardWinner = winner;
+			winner = event.getSiegeWinner();
+			victoryId = event.getCustomVictoryId();
+			siege.setCustomVictory(victoryId, event.getCustomVictoryName());
+			if (victoryId == null && standardStatus != null && winner == standardWinner) {
+				Messaging.sendGlobalMessage(standardMessage);
+				siege.setStatus(standardStatus);
+				if (winner == SiegeSide.ATTACKERS)
+					AttackerWin.attackerWin(siege);
+				else
+					DefenderWin.defenderWin(siege);
+			} else if (victoryId == null) {
+				switch (winner) {
+					case ATTACKERS -> AttackerTimedWin.attackerTimedWin(siege);
+					case DEFENDERS -> DefenderTimedWin.defenderTimedWin(siege);
+					case NOBODY -> endSiegeWithNoWinner(siege);
+				}
+			} else {
+				siege.setStatus(switch (winner) {
+					case ATTACKERS -> SiegeStatus.ATTACKER_CLOSE_WIN;
+					case DEFENDERS -> SiegeStatus.DEFENDER_CLOSE_WIN;
+					case NOBODY -> SiegeStatus.UNKNOWN;
+				});
+				Translatable message = winner == SiegeSide.NOBODY
+						? Translatable.of("msg_siege_custom_result", siege.getTranslatedSiegeTypeName(),
+								siege.getTown().getName(), event.getCustomVictoryName())
+						: Translatable.of("msg_siege_custom_victory", siege.getTranslatedSiegeTypeName(),
+								siege.getTown().getName(),
+								(winner == SiegeSide.ATTACKERS ? siege.getAttacker() : siege.getDefender()).getName(),
+								event.getCustomVictoryName());
+				siege.setEndMessage(message.defaultLocale());
+				Messaging.sendGlobalMessage(message);
+				switch (winner) {
+					case ATTACKERS -> AttackerWin.attackerWin(siege);
+					case DEFENDERS -> DefenderWin.defenderWin(siege);
+					case NOBODY -> endSiegeWithNoWinner(siege);
+				}
+			}
+			return true;
+		} finally {
+			completingSieges.remove(siege.getUUID());
+		}
 	}
 
 	/**
@@ -276,11 +368,12 @@ public class SiegeController {
 	 * 
 	 * @param siege
 	 */
-	private static void endSiegeWithNoWinner(Siege siege) {
+	public static void endSiegeWithNoWinner(Siege siege) {
 		siege.setSiegeWinner(SiegeSide.NOBODY);
 		siege.setStatus(SiegeStatus.UNKNOWN);
 		SiegeWarSiegeCompletionUtil.setCommonSiegeCompletionValues(siege);
 		SiegeWarMoneyUtil.handleWarChest(siege, siege.getAttacker());
+		Bukkit.getPluginManager().callEvent(new SiegeCompletedEvent(siege));
 	}
 
 	/**
@@ -395,7 +488,7 @@ public class SiegeController {
 		int distanceToResultSiege = 0;
 		int distanceToCandidateSiege = 0;
 		for (Siege candidateSiege : getSieges()) {
-			if (candidateSiege.getStatus().isActive()) {
+			if (candidateSiege.isSiegeTypeAvailable() && candidateSiege.getStatus().isActive()) {
 				Block flagBlock = candidateSiege.getFlagBlock();
 				if (flagBlock == null || !flagBlock.getWorld().getName().equals(loc.getWorld().getName()))
 					continue;
@@ -502,12 +595,27 @@ public class SiegeController {
 								   Town townOfSiegeStarter,
                                    Player siegeStarter,
 								   boolean useWarchest) {
+		startSiege(bannerBlock, siegeType, targetTown, attacker, defender, townOfSiegeStarter, siegeStarter, useWarchest, null);
+	}
+
+	public static void startSiege(SiegeCamp camp) {
+		startSiege(camp.getBannerBlock(), camp.getSiegeType(), camp.getTargetTown(), camp.getAttacker(),
+				camp.getDefender(), camp.getTownOfSiegeStarter(), camp.getPlayer(), camp.getSiegeType().paysWarChest(), camp);
+	}
+
+	private static void startSiege(Block bannerBlock, SiegeType siegeType, Town targetTown, Government attacker,
+			Government defender, Town townOfSiegeStarter, Player siegeStarter, boolean useWarchest, SiegeCamp camp) {
 		//Create Siege
 		SiegeController.newSiege(targetTown);
 		Siege siege = SiegeController.getSiege(targetTown);
 
 		//Set values in siege object
 		siege.setSiegeType(siegeType);
+		if (camp != null) {
+			siege.setCustomSiegeTypeId(camp.getCustomSiegeTypeId());
+			siege.setCustomData(camp.getCustomData());
+			siege.setBattleSessionsRequired(camp.getBattleSessionsRequired());
+		}
 		siege.setTown(targetTown);
 		siege.setAttacker(attacker);
 		siege.setDefender(defender);
@@ -560,10 +668,16 @@ public class SiegeController {
 		SiegeController.saveSiege(siege);
 
 		//Call event
-		Bukkit.getPluginManager().callEvent(new SiegeWarStartEvent(siege, townOfSiegeStarter, siegeStarter, startMessage.defaultLocale()));
+		if (camp == null || camp.isLegacyPlayerEventsEnabled())
+			Bukkit.getPluginManager().callEvent(new SiegeWarStartEvent(siege, townOfSiegeStarter, siegeStarter, startMessage.defaultLocale()));
+		else
+			Bukkit.getPluginManager().callEvent(new SiegeStartedEvent(siege, startMessage));
 	}
 
 	public static Translatable getGlobalSiegeStartMessage(Siege siege) {
+		if (siege.isCustomSiegeType())
+			return Translatable.of("msg_custom_siege_started", siege.getTranslatedSiegeTypeName(),
+					siege.getAttacker().getName(), siege.getTown().getName());
 		switch (siege.getSiegeType()) {
 			case REVOLT:
 				return
@@ -642,15 +756,98 @@ public class SiegeController {
 											  Town townOfSiegeStarter,
 											  TownBlock townBlock) throws TownyException {
 		SiegeCamp camp = new SiegeCamp(player, bannerBlock, siegeType, targetTown, attacker, defender, townOfSiegeStarter, townBlock);
-		
-		PreSiegeCampEvent event = new PreSiegeCampEvent(camp);
+		startSiegeCampProcess(camp);
+	}
+
+	public static void prepareSiegeCamp(SiegeCamp camp) throws TownyException {
+		SiegePrepareEvent event = new SiegePrepareEvent(camp);
 		Bukkit.getPluginManager().callEvent(event);
 		if (event.isCancelled())
-			throw new TownyException(event.getCancellationMsg());
-		
-		if (SiegeWarSettings.areSiegeCampsEnabled()) {
-			if (hasSiegeCamp(targetTown))
-				throw new TownyException(Translatable.of("msg_err_town_already_has_a_siege_assembly"));
+			throw new TownyException(event.getCancellationMessage());
+		validateCustomSiegeType(camp);
+	}
+
+	private static void validateCustomSiegeType(SiegeCamp camp) throws TownyException {
+		if (camp.getCustomSiegeTypeId() == null)
+			return;
+		SiegeTypeDefinition definition = SiegeTypeRegistry.getDefinition(camp.getCustomSiegeTypeId());
+		if (definition == null || !SiegeTypeRegistry.isAvailable(camp.getCustomSiegeTypeId())
+				|| definition.getBaseType() != camp.getSiegeType())
+			throw new TownyException(Translatable.of("msg_err_custom_siege_type_unavailable", camp.getCustomSiegeTypeId()));
+		if (!(camp.getAttacker() instanceof Nation) || camp.getDefender() != camp.getTargetTown())
+			throw new IllegalArgumentException("Siege attacker must be a nation and defender must be the target town");
+	}
+
+	public static void validatePreparedSiegeCamp(SiegeCamp camp) throws TownyException {
+		if (camp.getBannerBlock() == null || !(camp.getBannerBlock().getState() instanceof Banner)
+				|| camp.getBannerBlock().getType().name().endsWith("_WALL_BANNER") || camp.getTargetTown() == null)
+			throw new IllegalArgumentException("Siege requires a standing banner and target town");
+		validateCustomSiegeType(camp);
+		Town targetTown = camp.getTargetTown();
+		if (targetTown.isRuined())
+			throw new TownyException(Translatable.of("msg_err_cannot_start_siege_at_ruined_town"));
+		if (hasActiveSiege(targetTown))
+			throw new TownyException(Translatable.of("msg_err_cannot_start_siege_due_to_siege_immunity"));
+		if (hasSiegeCamp(targetTown))
+			throw new TownyException(Translatable.of("msg_err_town_already_has_a_siege_assembly"));
+		if (!(camp.getAttacker() instanceof Nation) || camp.getDefender() != targetTown)
+			throw new IllegalArgumentException("Siege attacker must be a nation and defender must be the target town");
+		if (camp.isLegacyPlayerEventsEnabled() && (camp.getPlayer() == null || camp.getTownOfSiegeStarter() == null
+				|| camp.getTownBlock() == null || camp.getTownBlock().getTown() != targetTown))
+			throw new TownyException(Translatable.of("msg_err_invalid_siege_starter_context"));
+		Resident starter = camp.getPlayer() == null ? null : TownyAPI.getInstance().getResident(camp.getPlayer());
+		if (camp.getPlayer() != null && (starter == null || starter.getTownOrNull() != camp.getTownOfSiegeStarter()))
+			throw new TownyException(Translatable.of("msg_err_invalid_siege_starter_context"));
+		if (camp.isSkipSiegeValidation())
+			return;
+		if (camp.getPlayer() == null || camp.getTownOfSiegeStarter() == null)
+			throw new TownyException(Translatable.of("msg_err_siege_start_requires_player"));
+		if ((camp.getSiegeType() == SiegeType.REVOLT && (camp.getTownOfSiegeStarter() != targetTown
+						|| camp.getAttacker() != targetTown.getNationOrNull()))
+				|| (camp.getSiegeType() == SiegeType.CONQUEST && camp.getAttacker() != camp.getTownOfSiegeStarter().getNationOrNull()))
+			throw new TownyException(Translatable.of("msg_err_invalid_siege_starter_context"));
+		if (camp.getSiegeType() == SiegeType.CONQUEST && camp.getTownOfSiegeStarter() == targetTown)
+			throw new TownyException(Translatable.of("msg_err_siege_war_cannot_attack_own_town"));
+		if (!targetTown.isAllowedToWar())
+			throw new TownyException(Translatable.of("msg_err_this_town_is_not_allowed_to_be_attacked"));
+		if (SiegeWarTownPeacefulnessUtil.isTownPeaceful(camp.getTownOfSiegeStarter()))
+			throw new TownyException(Translatable.of("msg_err_cannot_start_siege_as_a_peaceful_town"));
+		if (!SiegeWarSettings.doesTodayAllowASiegeToStart())
+			throw new TownyException(Translatable.of("msg_err_cannot_start_sieges_today"));
+		if (camp.getSiegeType() == SiegeType.REVOLT) {
+			SiegeWarMoneyUtil.throwIfTownCannotAffordToStartSiege(targetTown);
+			StartRevoltSiege.validateStartSiegeRequest(camp);
+		} else {
+			if (SiegeWarTownPeacefulnessUtil.isTownPeaceful(targetTown))
+				throw new TownyException(Translatable.of("msg_err_this_town_is_not_allowed_to_be_attacked"));
+			if (SiegeWarImmunityUtil.isTownSiegeImmune(targetTown))
+				throw new TownyException(Translatable.of("msg_err_cannot_start_siege_due_to_siege_immunity"));
+			Nation attacker = (Nation) camp.getAttacker();
+			SiegeWarMoneyUtil.throwIfNationCannotAffordToStartSiege(attacker, targetTown);
+			if (SiegeWarSettings.doesThisNationHaveTooManyActiveSieges(attacker))
+				throw new TownyException(Translatable.of("msg_err_siege_war_nation_has_too_many_active_siege_attacks"));
+			StartConquestSiege.validateStartSiegeRequest(camp);
+		}
+	}
+
+	public static void startSiegeCampProcess(SiegeCamp camp) throws TownyException {
+		SiegeType preparedType = camp.getSiegeType();
+		if (camp.isLegacyPlayerEventsEnabled()) {
+			PreSiegeCampEvent event = new PreSiegeCampEvent(camp);
+			Bukkit.getPluginManager().callEvent(event);
+			if (event.isCancelled())
+				throw new TownyException(event.getCancellationMessage());
+		}
+		if (camp.getSiegeType() != preparedType)
+			validatePreparedSiegeCamp(camp);
+		validateCustomSiegeType(camp);
+		if (hasActiveSiege(camp.getTargetTown()))
+			throw new TownyException(Translatable.of("msg_err_cannot_start_siege_due_to_siege_immunity"));
+		if (hasSiegeCamp(camp.getTargetTown()))
+			throw new TownyException(Translatable.of("msg_err_town_already_has_a_siege_assembly"));
+		if (SiegeWarSettings.areSiegeCampsEnabled() && !camp.isSkipSiegeCamp()) {
+			if (camp.getPlayer() == null || camp.getTownOfSiegeStarter() == null)
+				throw new TownyException(Translatable.of("msg_err_siege_start_requires_player"));
 			// Launch a SiegeCamp, a (by default) 10 minute minigame. If successful the Siege will be initiated in ernest. 
 			SiegeController.beginSiegeCamp(camp);
 		} else 

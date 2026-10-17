@@ -55,7 +55,7 @@ public class SiegeCampStartEvent extends Event {
     }
 
     public Nation getNation() {
-        return siegeCamp.getSiegeType().equals(SiegeType.REVOLT) ? (Nation) siegeCamp.getDefender() : (Nation) siegeCamp.getAttacker();
+        return (Nation) siegeCamp.getAttacker();
     }
 
     public Block getFlag() {

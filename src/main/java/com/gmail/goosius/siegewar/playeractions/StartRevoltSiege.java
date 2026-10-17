@@ -5,6 +5,7 @@ import com.gmail.goosius.siegewar.TownOccupationController;
 import com.gmail.goosius.siegewar.enums.SiegeType;
 import com.gmail.goosius.siegewar.enums.SiegeWarPermissionNodes;
 import com.gmail.goosius.siegewar.metadata.TownMetaDataController;
+import com.gmail.goosius.siegewar.objects.SiegeCamp;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
 import com.gmail.goosius.siegewar.utils.SiegeWarTownPeacefulnessUtil;
 import com.palmergames.bukkit.towny.TownyUniverse;
@@ -72,5 +73,9 @@ public class StartRevoltSiege {
         	throw new TownyException(translator.of("msg_err_siege_war_revolt_immunity_permanent"));
         if (System.currentTimeMillis() < immunity)
             throw new TownyException(translator.of("msg_err_siege_war_revolt_immunity_active"));
+	}
+
+	public static void validateStartSiegeRequest(SiegeCamp camp) throws TownyException {
+		allowSiegeOrThrow(camp.getPlayer(), camp.getTargetTown());
 	}
 }

@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.UUID;
 
 /**
  * This class contains utility functions related to banner control
@@ -40,7 +41,33 @@ import java.util.HashSet;
  */
 public class SiegeWarBannerControlUtil {
 
+	public static void clearPlayerParticipation(Siege siege, UUID playerUUID) {
+		clearPlayerParticipations(siege, Set.of(playerUUID));
+	}
+
+	public static void clearPlayerParticipations(Siege siege, Set<UUID> playerUUIDs) {
+		for (BannerControlSession session : siege.getBannerControlSessions().values()) {
+			if (!playerUUIDs.contains(session.getPlayer().getUniqueId()))
+				continue;
+			siege.removeBannerControlSession(session);
+			BossBarUtil.removeBannerCapBossBar(session.getPlayer());
+			CosmeticUtil.evaluateBeacon(session.getPlayer(), siege);
+			if (session.getPlayer().hasPotionEffect(PotionEffectType.GLOWING))
+				SiegeWar.getSiegeWar().getScheduler().runLater(session.getPlayer(),
+						() -> session.getPlayer().removePotionEffect(PotionEffectType.GLOWING), 1L);
+		}
+		for (Resident resident : siege.getBannerControllingResidents())
+			if (playerUUIDs.contains(resident.getUUID()))
+				siege.removeBannerControllingResident(resident);
+		if (siege.getAttackingCommander() != null && playerUUIDs.contains(siege.getAttackingCommander().getUUID()))
+			siege.setAttackingCommander(null);
+		if (siege.getDefendingCommander() != null && playerUUIDs.contains(siege.getDefendingCommander().getUUID()))
+			siege.setDefendingCommander(null);
+	}
+
 	public static void evaluateBannerControl(Siege siege) {
+		if (!siege.isSiegeTypeAvailable())
+			return;
 		try {
 			if(siege.getStatus() == SiegeStatus.IN_PROGRESS) {
 				evaluateBannerControlPoints(siege);
@@ -159,10 +186,10 @@ public class SiegeWarBannerControlUtil {
 		if(player.getWorld() != siege.getFlagLocation().getWorld())
 			return false; //Player not in same world as siege
 
-		if (!resident.hasTown())
+		if (!resident.hasTown() && !siege.hasActivePlayerSideOverride(player.getUniqueId()))
 			return false; //Player is a nomad
 
-		if (SiegeWarTownPeacefulnessUtil.isTownPeaceful(resident.getTownOrNull())) 
+		if (resident.hasTown() && SiegeWarTownPeacefulnessUtil.isTownPeaceful(resident.getTownOrNull()))
 			return false; //Player is from a peaceful town
 
 		if (SiegeWarSettings.getWarCommonOccupiedTownBattleParticipationDisabled() && TownOccupationController.isResidentInAnOccupiedTown(resident)) 
@@ -203,7 +230,9 @@ public class SiegeWarBannerControlUtil {
 		for(BannerControlSession bannerControlSession: siege.getBannerControlSessions().values()) {
 			try {
 				//Check if session failed
-				if (!doesPlayerMeetBasicSessionRequirements(siege, bannerControlSession.getPlayer(), bannerControlSession.getResident())) {
+				if (!doesPlayerMeetBasicSessionRequirements(siege, bannerControlSession.getPlayer(), bannerControlSession.getResident())
+						|| (siege.isPlayerSideOverridesEnabled()
+						&& SiegeSide.getPlayerSiegeSide(siege, bannerControlSession.getPlayer()) != bannerControlSession.getSiegeSide())) {
 					siege.removeBannerControlSession(bannerControlSession);
 					Translatable errorMessage = SiegeWarSettings.isWildernessTrapWarfareMitigationEnabled() ? Translatable.of("msg_siege_war_banner_control_session_failure_with_altitude") : Translatable.of("msg_siege_war_banner_control_session_failure");
 					BossBarUtil.removeBannerCapBossBar(bannerControlSession.getPlayer());
@@ -300,7 +329,7 @@ public class SiegeWarBannerControlUtil {
 		//Award battle points
 		int battlePoints = 0;
 		int sessionNumber = Math.min(siege.getNumBattleSessionsCompleted() + 1,
-				SiegeWarSettings.getSiegeDurationBattleSessions());
+				siege.getBattleSessionsRequired());
 		switch(siege.getBannerControllingSide()) {
 			case ATTACKERS:
 				battlePoints = siege.getBannerControllingResidents().size() * SiegeWarSettings.getWarBattlePointsForAttackerOccupation();

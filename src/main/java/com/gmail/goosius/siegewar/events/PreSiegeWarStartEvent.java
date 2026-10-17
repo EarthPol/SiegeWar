@@ -1,9 +1,12 @@
 package com.gmail.goosius.siegewar.events;
 
 import com.gmail.goosius.siegewar.enums.SiegeType;
+import com.gmail.goosius.siegewar.objects.SiegeCamp;
 import com.palmergames.bukkit.towny.object.Nation;
 import com.palmergames.bukkit.towny.object.Town;
 import com.palmergames.bukkit.towny.object.TownBlock;
+import com.palmergames.bukkit.towny.object.Translatable;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
@@ -21,8 +24,9 @@ public class PreSiegeWarStartEvent extends Event implements Cancellable {
     private final Block flag;
     private final TownBlock townBlock;
     private final Town targetTown;
+    private NamespacedKey customSiegeTypeId;
     private boolean isCancelled;
-    private String cancellationMsg = "Siege prevented by another plugin.";
+    private Translatable cancellationMessage = Translatable.of("msg_siege_start_cancelled");
 
     public PreSiegeWarStartEvent(SiegeType siegeType,
                                  Town targetTown,
@@ -38,6 +42,20 @@ public class PreSiegeWarStartEvent extends Event implements Cancellable {
         this.nation = nation;
         this.flag = flag;
         this.townBlock = townBlock;
+    }
+
+    public PreSiegeWarStartEvent(SiegeCamp camp) {
+        this(camp.getSiegeType(), camp.getTargetTown(), (Nation) camp.getAttacker(),
+                camp.getTownOfSiegeStarter(), camp.getPlayer(), camp.getBannerBlock(), camp.getTownBlock());
+        customSiegeTypeId = camp.getCustomSiegeTypeId();
+    }
+
+    public NamespacedKey getSiegeTypeId() {
+        return customSiegeTypeId == null ? new NamespacedKey("siegewar", siegeType.toLowerCase()) : customSiegeTypeId;
+    }
+
+    public NamespacedKey getCustomSiegeTypeId() {
+        return customSiegeTypeId;
     }
 
     @NotNull
@@ -85,11 +103,19 @@ public class PreSiegeWarStartEvent extends Event implements Cancellable {
     }
 
     public String getCancellationMsg() {
-        return cancellationMsg;
+        return cancellationMessage == null ? null : cancellationMessage.defaultLocale();
     }
 
     public void setCancellationMsg(String cancellationMsg) {
-        this.cancellationMsg = cancellationMsg;
+        cancellationMessage = cancellationMsg == null ? null : Translatable.literal(cancellationMsg);
+    }
+
+    public Translatable getCancellationMessage() {
+        return cancellationMessage;
+    }
+
+    public void setCancellationMessage(Translatable message) {
+        cancellationMessage = message;
     }
 
     public SiegeType getSiegeType() {

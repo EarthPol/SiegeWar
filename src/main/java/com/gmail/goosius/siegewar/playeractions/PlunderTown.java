@@ -48,6 +48,10 @@ public class PlunderTown {
 		Town townToBePlundered = siege.getTown();
 		TownyUniverse townyUniverse = TownyUniverse.getInstance();
 		final Translator translator = Translator.locale(player);
+		if (!siege.isSiegeTypeAvailable())
+			throw new TownyException(translator.of("msg_err_custom_siege_type_unavailable", siege.getSiegeTypeId()));
+		if (!siege.allowsPlundering())
+			throw new TownyException(translator.of("msg_err_siege_type_plundering_disabled", siege.getTranslatedSiegeTypeName()));
 
 		Resident resident = townyUniverse.getResident(player.getUniqueId());
 		if (resident == null)

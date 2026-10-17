@@ -3,9 +3,11 @@ package com.gmail.goosius.siegewar.utils;
 import com.gmail.goosius.siegewar.Messaging;
 import com.gmail.goosius.siegewar.SiegeController;
 import com.gmail.goosius.siegewar.SiegeWar;
+import com.gmail.goosius.siegewar.enums.SiegeSide;
 import com.gmail.goosius.siegewar.metadata.ResidentMetaDataController;
 import com.gmail.goosius.siegewar.objects.Siege;
 import com.gmail.goosius.siegewar.settings.SiegeWarSettings;
+import com.palmergames.bukkit.towny.TownyAPI;
 import com.palmergames.bukkit.towny.object.Nation;
 import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Town;
@@ -76,50 +78,58 @@ public class SiegeWarNotificationUtil {
 	public static void informSiegeParticipants(Siege siege, Translatable... message) {
 
 		try {
-			//Build list of who to inform
-			Nation nation;
-			Set<Nation> nationsToInform = new HashSet<>();
-			Set<Town> townsToInform= new HashSet<>();
-
-			//Attackers
-			if(siege.getAttacker() instanceof Nation) {
-				//Attacker is a nation
-				nation = (Nation)siege.getAttacker();
-				nationsToInform.add(nation);
-				nationsToInform.addAll(nation.getMutualAllies());
-			} else if (((Town)siege.getAttacker()).hasNation()) {
-				//Attacker is a nation town
-				nation = ((Town)siege.getAttacker()).getNation();
-				nationsToInform.add(nation);
-				nationsToInform.addAll(nation.getMutualAllies());
-			} else {
-				//Attacker is a non-nation town
-				townsToInform.add((Town)siege.getAttacker());
-			}
-
-			//Defenders
-			if(siege.getDefender() instanceof Nation) {
-				//Defender is a nation
-				nation = (Nation)siege.getDefender();
-				nationsToInform.add(nation);
-				nationsToInform.addAll(nation.getMutualAllies());
-			} else if (((Town)siege.getDefender()).hasNation()) {
-				//Defender is a nation town
-				nation = ((Town)siege.getDefender()).getNation();
-				nationsToInform.add(nation);
-				nationsToInform.addAll(nation.getMutualAllies());
-			} else {
-				//Defender is a non-nation town
-				townsToInform.add((Town)siege.getDefender());
-			}
-
-			//Inform required towns and nations
 			Set<Resident> residentsToInform = new HashSet<>();
-			for(Nation nationToInform: nationsToInform) {
-				residentsToInform.addAll(nationToInform.getResidents());
-			}
-			for(Town townToInform: townsToInform) {
-				residentsToInform.addAll(townToInform.getResidents());
+			if (!siege.isPlayerSideOverridesEnabled()) {
+				//Build list of who to inform
+				Nation nation;
+				Set<Nation> nationsToInform = new HashSet<>();
+				Set<Town> townsToInform= new HashSet<>();
+
+				//Attackers
+				if(siege.getAttacker() instanceof Nation) {
+					//Attacker is a nation
+					nation = (Nation)siege.getAttacker();
+					nationsToInform.add(nation);
+					nationsToInform.addAll(nation.getMutualAllies());
+				} else if (((Town)siege.getAttacker()).hasNation()) {
+					//Attacker is a nation town
+					nation = ((Town)siege.getAttacker()).getNation();
+					nationsToInform.add(nation);
+					nationsToInform.addAll(nation.getMutualAllies());
+				} else {
+					//Attacker is a non-nation town
+					townsToInform.add((Town)siege.getAttacker());
+				}
+
+				//Defenders
+				if(siege.getDefender() instanceof Nation) {
+					//Defender is a nation
+					nation = (Nation)siege.getDefender();
+					nationsToInform.add(nation);
+					nationsToInform.addAll(nation.getMutualAllies());
+				} else if (((Town)siege.getDefender()).hasNation()) {
+					//Defender is a nation town
+					nation = ((Town)siege.getDefender()).getNation();
+					nationsToInform.add(nation);
+					nationsToInform.addAll(nation.getMutualAllies());
+				} else {
+					//Defender is a non-nation town
+					townsToInform.add((Town)siege.getDefender());
+				}
+
+				//Inform required towns and nations
+				for(Nation nationToInform: nationsToInform) {
+					residentsToInform.addAll(nationToInform.getResidents());
+				}
+				for(Town townToInform: townsToInform) {
+					residentsToInform.addAll(townToInform.getResidents());
+				}
+			} else {
+				siege.getPlayerSideOverrides().forEach((playerUUID, side) -> {
+					Resident resident = TownyAPI.getInstance().getResident(playerUUID);
+					if (resident != null && side != SiegeSide.NOBODY)
+						residentsToInform.add(resident);
+				});
 			}
 			for (Resident resident : residentsToInform) {
 				if (ResidentMetaDataController.getNotificationsDisabled(resident))

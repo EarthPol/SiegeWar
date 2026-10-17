@@ -27,6 +27,13 @@ public class AttackerTimedWin {
     }
 
     private static Translatable getStandardAttackerWinMessage(Siege siege) {
+        if (siege.isCustomSiegeType()) {
+            Translatable message = Translatable.of("msg_custom_siege_timed_attacker_win",
+                    siege.getTranslatedSiegeTypeName(), siege.getTown().getName(),
+                    siege.getAttacker().getName(), siege.getStatus().getTimedVictoryTypeText(), siege.getDefendingNationIfPossibleElseTown().getName());
+            siege.setEndMessage(message.defaultLocale());
+            return message;
+        }
         //Base victory message
         String key = String.format("msg_%s_siege_timed_attacker_win", siege.getSiegeType().toLowerCase());
         Translatable message = null;

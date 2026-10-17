@@ -48,6 +48,8 @@ public class SiegeWarScoringUtil {
 	public static void awardPenaltyPoints(boolean residentIsAttacker,
 										  Player player,
 										  Siege siege) {
+		if (!siege.isSiegeTypeAvailable())
+			return;
 
 		//Give battle points to opposing side
 		int battlePoints; 

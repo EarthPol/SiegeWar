@@ -105,6 +105,8 @@ public class SiegeWarBattleSessionUtil {
 	}
 
 	public static void endBattleSessionForSiege(Siege siege) {
+		if (!siege.isSiegeTypeAvailable())
+			return;
 		try {
 			if (siege.getStatus() == SiegeStatus.IN_PROGRESS) {
 				//Adjust numBattleSessionsCompleted

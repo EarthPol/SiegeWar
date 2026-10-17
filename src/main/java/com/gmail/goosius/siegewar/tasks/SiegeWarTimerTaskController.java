@@ -40,26 +40,28 @@ public class SiegeWarTimerTaskController {
 	 * @return true if the siege was ended by this method call      	   	
 	 */
 	private static boolean evaluateTimedSiegeOutcome(Siege siege) {
+		if (!siege.isSiegeTypeAvailable())
+			return false;
 		switch(siege.getStatus()) {
 			case IN_PROGRESS:
 				//If last battle session has been completed, end siege and choose winner
 				if (siege.hasCompletedAllBattleSessions()) {
 					SiegeController.endSiegeWithTimedWin(siege);
-					return true;
+					return !siege.getStatus().isActive();
 				} else
 					return false;
 
 			case PENDING_DEFENDER_SURRENDER:
 				if (siege.hasCompletedAllBattleSessions()) {
 					SurrenderDefence.surrenderDefence(siege);
-					return true;
+					return !siege.getStatus().isActive();
 				} else 
 					return false;
 
 			case PENDING_ATTACKER_ABANDON:
 				if (siege.hasCompletedAllBattleSessions()) {
 					AbandonAttack.abandonAttack(siege);
-					return true;
+					return !siege.getStatus().isActive();
 				} else 
 					return false;
 

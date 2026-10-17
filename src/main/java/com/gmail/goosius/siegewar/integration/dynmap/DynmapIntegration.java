@@ -152,12 +152,12 @@ public class DynmapIntegration {
                         }
                         List<String> lines = new ArrayList<>();
                         lines.add(Translation.of("dynmap_siege_town", siege.getTown().getName()));
-                        lines.add(Translation.of("dynmap_siege_type", siege.getSiegeType().getName()));
+                        lines.add(Translation.of("dynmap_siege_type", siege.getTranslatedSiegeTypeName().defaultLocale()));
                         if(TownyEconomyHandler.isActive()) {
                             lines.add(Translation.of("dynmap_siege_war_chest", TownyEconomyHandler.getFormattedBalance(siege.getWarChestAmount())));
                         }
-                        lines.add(Translation.of("dynmap_siege_progress", siege.getNumBattleSessionsCompleted(), SiegeWarSettings.getSiegeDurationBattleSessions()));
-                        lines.add(Translation.of("dynmap_siege_status", siege.getStatus().getName()));
+                        lines.add(Translation.of("dynmap_siege_progress", siege.getNumBattleSessionsCompleted(), siege.getBattleSessionsRequired()));
+                        lines.add(Translation.of("dynmap_siege_status", siege.getTranslatedStatusName().defaultLocale()));
                         lines.add(Translation.of("dynmap_siege_balance", siege.getSiegeBalance()));
                         lines.add(Translation.of("dynmap_siege_banner_control",
                             WordUtils.capitalizeFully(siege.getBannerControllingSide().name())
